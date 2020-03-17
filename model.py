@@ -7,7 +7,7 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.n_channels = n_channels
 
-        self.conv_relu_norm1 = self.conv_norm(self.n_channels, 64)
+        self.conv_relu_norm = ConvNormRelu(self.n_channels, 64, conv_padding=0)
 
         self.n_ds_layers = 2
         input_ds_channel = 64
@@ -25,7 +25,7 @@ class Generator(nn.Module):
             self.down_samples.append(up_sample)
             input_ds_channel = input_ds_channel / 2
 
-        self.conv_relu_norm2 = self.conv_norm(input_ds_channel, 3)
+        self.conv_tanh_norm = ConvNormRelu(input_ds_channel, 3, activation="tanh", conv_padding=0)
 
     def forward(self, inputs):
         x = self.conv_relu_norm1(inputs)
@@ -38,18 +38,24 @@ class Generator(nn.Module):
         for i in range(self.n_ds_layers):
             x = self.up_samples[i](x)
 
-        return self.conv_relu_norm2(x)
+        return self.conv_tanh_norm(x)
 
 
 class ConvNormRelu(nn.Module):
-    def __init__(self, n_channels, n_filters, kernel_size=7, stride=1, padding=3):
+    def __init__(self, n_channels, n_filters, kernel_size=7, stride=1, do_reflect_padding=True,
+                 reflect_padding=3, conv_padding=1, activation="relu", do_norm=True):
         super(ConvNormRelu, self).__init__()
-        self.padding = nn.ReflectionPad2d(padding)
+        self.activation = activation
+        self.do_norm = do_norm
+        self.do_reflect_padding = do_reflect_padding
+
+        self.padding = nn.ReflectionPad2d(reflect_padding)
         self.conv = nn.Conv2d(in_channels=n_channels,
                               out_channels=n_filters,
                               kernel_size=kernel_size,
                               stride=stride,
-                              padding=1)
+                              padding=conv_padding)
+
         self.norm = nn.InstanceNorm2d(n_filters)
 
         for layer in self.modules():
@@ -57,10 +63,17 @@ class ConvNormRelu(nn.Module):
             layer.bias.data.zero_()
 
     def forward(self, x):
-        x = self.padding(x)
+        if self.do_reflect_padding:
+            x = self.padding(x)
         x = self.conv(x)
-        x = self.norm(x)
-        return F.relu(x)
+        if self.do_norm:
+            x = self.norm(x)
+        if self.activation == "relu":
+            return F.relu(x)
+        elif self.activation == "leaky relu":
+            return F.leaky_relu(x, 0.2)
+        elif self.activation == "tanh":
+            return F.tanh(x)
 
 
 class DownSample(nn.Module):
@@ -109,8 +122,8 @@ class ResNet(nn.Module):
         self.in_channels = in_channels
         self.kernel_size = kernel_size
 
-        self.conv_relu_norm1 = ConvNormRelu(self.in_channels, self.in_channels, self.kernel_size, padding=1)
-        self.conv_relu_norm2 = ConvNormRelu(self.in_channels, self.in_channels, self.kernel_size, padding=1)
+        self.conv_relu_norm1 = ConvNormRelu(self.in_channels, self.in_channels, self.kernel_size, conv_padding=0)
+        self.conv_relu_norm2 = ConvNormRelu(self.in_channels, self.in_channels, self.kernel_size, conv_padding=0)
 
         for layer in self.modules():
             nn.init.normal_(layer.weight, 0, 0.02)
@@ -120,3 +133,26 @@ class ResNet(nn.Module):
         x = self.conv_relu_norm1(inputs)
         x = self.conv_relu_norm2(x)
         return inputs + x
+
+
+class Discriminator(nn.Module):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+
+        self.C64 = ConvNormRelu(3, 64, 4, 2, do_reflect_padding=False, activation="leaky relu", do_norm=False)
+        filters = [64, 128, 256, 512]
+        self.conv_leakyrelu_norms = []
+        for idx, filter in enumerate(filters[:-1]):
+            C = self.C64 = ConvNormRelu(filter, filters[idx + 1], 4, 2, do_reflect_padding=False,
+                                        activation="leaky relu", do_norm=True)
+            self.conv_leakyrelu_norms.append(C)
+
+        self.output = nn.Conv2d(filters[-1], 1, kernel_size=4, stride=1, padding=1)
+        nn.init.normal_(self.output.weight, 0, 0.02)
+        self.output.bias.data.zero_()
+
+    def forward(self, inputs):
+        x = self.C64(inputs)
+        for i in range(len(self.conv_relu_norms)):
+            x = self.conv_leakyrelu_norms[i](x)
+        return self.output(x)
