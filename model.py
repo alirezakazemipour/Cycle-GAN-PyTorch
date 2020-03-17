@@ -122,8 +122,10 @@ class ResNet(nn.Module):
         self.in_channels = in_channels
         self.kernel_size = kernel_size
 
-        self.conv_relu_norm1 = ConvNormRelu(self.in_channels, self.in_channels, self.kernel_size, conv_padding=0)
-        self.conv_relu_norm2 = ConvNormRelu(self.in_channels, self.in_channels, self.kernel_size, conv_padding=0)
+        self.conv_relu_norm1 = ConvNormRelu(self.in_channels, self.in_channels,
+                                            self.kernel_size, conv_padding=0, reflect_padding=1)
+        self.conv_relu_norm2 = ConvNormRelu(self.in_channels, self.in_channels,
+                                            self.kernel_size, conv_padding=0, reflect_padding=1)
 
         for layer in self.modules():
             nn.init.normal_(layer.weight, 0, 0.02)
