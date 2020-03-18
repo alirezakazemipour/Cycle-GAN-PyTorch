@@ -16,6 +16,7 @@ eggs/
 .eggs/
 .idea/
 models/
+dataset/
 *.pth
 lib/
 lib64/

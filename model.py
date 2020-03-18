@@ -7,28 +7,29 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.n_channels = n_channels
 
-        self.conv_relu_norm = ConvNormRelu(self.n_channels, 64, conv_padding=0)
+        self.conv_relu_norm = ConvNormRelu(self.n_channels, 64, conv_padding=0).cuda()
 
         self.n_ds_layers = 2
         input_ds_channel = 64
         self.down_samples = []
         for _ in range(self.n_ds_layers):
-            down_sample = DownSample(n_channels=input_ds_channel, n_filters=2 * input_ds_channel)
+            down_sample = DownSample(n_channels=input_ds_channel, n_filters=2 * input_ds_channel).cuda()
             self.down_samples.append(down_sample)
             input_ds_channel = 2 * input_ds_channel
 
         self.n_resnet_layers = 9
-        self.resnet_layers = [ResNet() for _ in range(self.n_resnet_layers)]
+        self.resnet_layers = [ResNet().cuda() for _ in range(self.n_resnet_layers)]
 
+        self.up_samples = []
         for _ in range(self.n_ds_layers):
-            up_sample = UpSample(n_channels=input_ds_channel, n_filters=input_ds_channel / 2)
-            self.down_samples.append(up_sample)
+            up_sample = UpSample(n_channels=int(input_ds_channel), n_filters=int(input_ds_channel / 2)).cuda()
+            self.up_samples.append(up_sample)
             input_ds_channel = input_ds_channel / 2
 
-        self.conv_tanh_norm = ConvNormRelu(input_ds_channel, 3, activation="tanh", conv_padding=0)
+        self.conv_tanh_norm = ConvNormRelu(int(input_ds_channel), 3, activation="tanh", conv_padding=0).cuda()
 
     def forward(self, inputs):
-        x = self.conv_relu_norm1(inputs)
+        x = self.conv_relu_norm(inputs)
         for i in range(self.n_ds_layers):
             x = self.down_samples[i](x)
 
@@ -59,8 +60,9 @@ class ConvNormRelu(nn.Module):
         self.norm = nn.InstanceNorm2d(n_filters)
 
         for layer in self.modules():
-            nn.init.normal_(layer.weight, 0, 0.02)
-            layer.bias.data.zero_()
+            if isinstance(layer, nn.Conv2d):
+                nn.init.normal_(layer.weight)
+                layer.bias.data.zero_()
 
     def forward(self, x):
         if self.do_reflect_padding:
@@ -87,8 +89,9 @@ class DownSample(nn.Module):
         self.norm = nn.InstanceNorm2d(n_filters)
 
         for layer in self.modules():
-            nn.init.normal_(layer.weight, 0, 0.02)
-            layer.bias.data.zero_()
+            if isinstance(layer, nn.Conv2d):
+                nn.init.normal_(layer.weight)
+                layer.bias.data.zero_()
 
     def forward(self, x):
         x = self.conv(x)
@@ -107,8 +110,9 @@ class UpSample(nn.Module):
         self.norm = nn.InstanceNorm2d(n_filters)
 
         for layer in self.modules():
-            nn.init.normal_(layer.weight, 0, 0.02)
-            layer.bias.data.zero_()
+            if isinstance(layer, nn.ConvTranspose2d):
+                nn.init.normal_(layer.weight)
+                layer.bias.data.zero_()
 
     def forward(self, x):
         x = self.deconv(x)
@@ -128,8 +132,9 @@ class ResNet(nn.Module):
                                             self.kernel_size, conv_padding=0, reflect_padding=1)
 
         for layer in self.modules():
-            nn.init.normal_(layer.weight, 0, 0.02)
-            layer.bias.data.zero_()
+            if isinstance(layer, nn.Conv2d):
+                nn.init.normal_(layer.weight)
+                layer.bias.data.zero_()
 
     def forward(self, inputs):
         x = self.conv_relu_norm1(inputs)
@@ -138,11 +143,12 @@ class ResNet(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, n_channels):
         super(Discriminator, self).__init__()
-
-        self.C64 = ConvNormRelu(3, 64, 4, 2, do_reflect_padding=False, activation="leaky relu", do_norm=False)
+        self.n_channels = n_channels
         filters = [64, 128, 256, 512]
+
+        self.C64 = ConvNormRelu(self.n_channels, filters[0], 4, 2, do_reflect_padding=False, activation="leaky relu", do_norm=False)
         self.conv_leakyrelu_norms = []
         for idx, filter in enumerate(filters[:-1]):
             C = self.C64 = ConvNormRelu(filter, filters[idx + 1], 4, 2, do_reflect_padding=False,
