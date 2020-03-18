@@ -37,7 +37,7 @@ class Train:
         fake_a = self.B_Generator(real_b)
         recycle_b = self.A_Generator(fake_a)
 
-        self.add_to_history(fake_a.detach(), fake_b.detach())
+        self.add_to_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
 
         return fake_a, recycle_a, fake_b, recycle_b
 
@@ -75,7 +75,7 @@ class Train:
         real_a = from_numpy(real_a).float().permute([0, 3, 1, 2]).to(self.device)
         real_b = from_numpy(real_b).float().permute([0, 3, 1, 2]).to(self.device)
         history_fake_a = from_numpy(history_fake_a).float().to(self.device)
-        history_fake_b = from_numpy(history_fake_b).float.to(self.device)
+        history_fake_b = from_numpy(history_fake_b).float().to(self.device)
 
         for net in [self.A_Discriminator, self.B_Discriminator]:
             if net is not None:

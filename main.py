@@ -22,10 +22,11 @@ for epoch in range(200):
 
     if history_fake_a is not None:
         a_dis_loss, b_dis_loss = train.calculate_discriminator_loss(
-            trainA[idx_a], np.array(history_fake_a).reshape((50, 1)),
-            trainB[idx_b], np.array(history_fake_b).reshape((50, 1)))
+            trainA[idx_a], np.vstack(history_fake_a),
+            trainB[idx_b], np.vstack(history_fake_a))
 
         train.optimize_discriminator(a_dis_loss, b_dis_loss)
 
-        print(f"generator_loss:{generator_loss:3.3f}\n"
-              f"discriminator:{0.5 * (a_dis_loss + b_dis_loss):3.3f}")
+        print(f"Epoch:{epoch}| "
+              f"generator_loss:{generator_loss.item():3.3f}| "
+              f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():3.3f}")
