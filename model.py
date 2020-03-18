@@ -41,6 +41,8 @@ class Generator(nn.Module):
 
         return self.conv_tanh_norm(x)
 
+#  region ConvNormRelu
+
 
 class ConvNormRelu(nn.Module):
     def __init__(self, n_channels, n_filters, kernel_size=7, stride=1, do_reflect_padding=True,
@@ -49,11 +51,14 @@ class ConvNormRelu(nn.Module):
         self.activation = activation
         self.do_norm = do_norm
         self.do_reflect_padding = do_reflect_padding
+        self.n_channels = n_channels
+        self.n_filters = n_filters
+        self.kernel_size = kernel_size
 
         self.padding = nn.ReflectionPad2d(reflect_padding)
-        self.conv = nn.Conv2d(in_channels=n_channels,
-                              out_channels=n_filters,
-                              kernel_size=kernel_size,
+        self.conv = nn.Conv2d(in_channels=self.n_channels,
+                              out_channels=self.n_filters,
+                              kernel_size=self.kernel_size,
                               stride=stride,
                               padding=conv_padding)
 
@@ -76,6 +81,10 @@ class ConvNormRelu(nn.Module):
             return F.leaky_relu(x, 0.2)
         elif self.activation == "tanh":
             return F.tanh(x)
+#  endregion
+
+
+#  region DownSample
 
 
 class DownSample(nn.Module):
@@ -99,6 +108,11 @@ class DownSample(nn.Module):
         return F.relu(x)
 
 
+#  endregion
+
+#  region UpSample
+
+
 class UpSample(nn.Module):
     def __init__(self, n_channels, n_filters, kernel_size=3, stride=2):
         super(UpSample, self).__init__()
@@ -106,7 +120,8 @@ class UpSample(nn.Module):
                                          out_channels=n_filters,
                                          kernel_size=kernel_size,
                                          stride=stride,
-                                         padding=1)
+                                         padding=1,
+                                         output_padding=1)
         self.norm = nn.InstanceNorm2d(n_filters)
 
         for layer in self.modules():
@@ -118,6 +133,11 @@ class UpSample(nn.Module):
         x = self.deconv(x)
         x = self.norm(x)
         return F.relu(x)
+
+
+#  endregion
+
+# region ResNet
 
 
 class ResNet(nn.Module):
@@ -142,17 +162,22 @@ class ResNet(nn.Module):
         return inputs + x
 
 
+# endregion
+
+
 class Discriminator(nn.Module):
     def __init__(self, n_channels):
         super(Discriminator, self).__init__()
         self.n_channels = n_channels
         filters = [64, 128, 256, 512]
 
-        self.C64 = ConvNormRelu(self.n_channels, filters[0], 4, 2, do_reflect_padding=False, activation="leaky relu", do_norm=False)
+        self.C64 = ConvNormRelu(n_channels=self.n_channels, n_filters=filters[0], kernel_size=4, stride=2,
+                                do_reflect_padding=False, activation="leaky relu", do_norm=False).cuda()
+
         self.conv_leakyrelu_norms = []
         for idx, filter in enumerate(filters[:-1]):
-            C = self.C64 = ConvNormRelu(filter, filters[idx + 1], 4, 2, do_reflect_padding=False,
-                                        activation="leaky relu", do_norm=True)
+            C = ConvNormRelu(filter, filters[idx + 1], 4, 2, do_reflect_padding=False,
+                             activation="leaky relu", do_norm=True).cuda()
             self.conv_leakyrelu_norms.append(C)
 
         self.output = nn.Conv2d(filters[-1], 1, kernel_size=4, stride=1, padding=1)
@@ -161,6 +186,6 @@ class Discriminator(nn.Module):
 
     def forward(self, inputs):
         x = self.C64(inputs)
-        for i in range(len(self.conv_relu_norms)):
+        for i in range(len(self.conv_leakyrelu_norms)):
             x = self.conv_leakyrelu_norms[i](x)
         return self.output(x)

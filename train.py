@@ -3,6 +3,7 @@ from model import Generator, Discriminator
 from torch.optim import Adam
 from torch import from_numpy
 import numpy as np
+import random
 
 
 class Train:
@@ -23,6 +24,9 @@ class Train:
 
         self.cycle_loss = torch.nn.L1Loss()
 
+        self.A_fake_history = []
+        self.B_fake_history = []
+
     def forward(self, real_a, real_b):
         real_a = np.expand_dims(real_a, axis=0)
         real_b = np.expand_dims(real_b, axis=0)
@@ -33,9 +37,16 @@ class Train:
         fake_a = self.B_Generator(real_b)
         recycle_b = self.A_Generator(fake_a)
 
+        self.add_to_history(fake_a.detach(), fake_b.detach())
+
         return fake_a, recycle_a, fake_b, recycle_b
 
     def calculate_generator_loss(self, real_a, fake_a, recycle_a, real_b, fake_b, recycle_b, lam=10):
+
+        real_a = np.expand_dims(real_a, axis=0)
+        real_b = np.expand_dims(real_b, axis=0)
+        real_a = from_numpy(real_a).float().permute([0, 3, 1, 2]).to(self.device)
+        real_b = from_numpy(real_b).float().permute([0, 3, 1, 2]).to(self.device)
 
         for net in [self.A_Discriminator, self.B_Discriminator]:
             if net is not None:
@@ -57,11 +68,45 @@ class Train:
         generator_loss.backward()
         self.generator_opt.step()
 
-    def calculate_discriminator_loss(self, real_a, fake_a, recycle_a, real_b, fake_b, recycle_b, lam=10):
+    def calculate_discriminator_loss(self, real_a, history_fake_a, real_b, history_fake_b):
+
+        real_a = np.expand_dims(real_a, axis=0)
+        real_b = np.expand_dims(real_b, axis=0)
+        real_a = from_numpy(real_a).float().permute([0, 3, 1, 2]).to(self.device)
+        real_b = from_numpy(real_b).float().permute([0, 3, 1, 2]).to(self.device)
+        history_fake_a = from_numpy(history_fake_a).float().to(self.device)
+        history_fake_b = from_numpy(history_fake_b).float.to(self.device)
 
         for net in [self.A_Discriminator, self.B_Discriminator]:
             if net is not None:
                 for param in net.parameters():
-                    param.requires_grad = False
+                    param.requires_grad = True
 
-        pass
+        a_dis_loss = ((self.A_Discriminator(real_b) - 1) ** 2).mean() + \
+                     (self.A_Discriminator(history_fake_b) ** 2).mean()
+        b_dis_loss = ((self.B_Discriminator(real_a) - 1) ** 2).mean() + \
+                     (self.B_Discriminator(history_fake_a) ** 2).mean()
+
+        return a_dis_loss, b_dis_loss
+
+    def optimize_discriminator(self, a_dis_loss, b_dis_loss):
+        self.discriminator_opt.zero_grad()
+        a_dis_loss.backward()
+        b_dis_loss.backward()
+        self.discriminator_opt.step()
+
+    def get_history(self):
+        if len(self.A_fake_history) >= 50:
+            return random.sample(self.A_fake_history, 50), random.sample(self.B_fake_history, 50)
+        else:
+            return None, None
+
+    def add_to_history(self, fake_a, fake_b):
+        if len(self.A_fake_history) < 1000:
+            self.A_fake_history.append(fake_a)
+            self.B_fake_history.append(fake_b)
+        else:
+            _ = self.A_fake_history.pop()
+            _ = self.B_fake_history.pop()
+            self.A_fake_history.append(fake_a)
+            self.B_fake_history.append(fake_b)
