@@ -15,6 +15,8 @@ idx_b = random.randint(0, len(trainB))
 train = Train(3)
 
 fake_a, recycle_a, fake_b, recycle_b = train.forward(trainA[idx_a], trainB[idx_b])
+generator_loss = train.calculate_generator_loss(trainA[idx_a], fake_a, recycle_a, trainB[idx_b], fake_b, recycle_b)
+train.optimize_generator(generator_loss)
 
 
 

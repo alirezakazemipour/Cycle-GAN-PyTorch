@@ -21,6 +21,8 @@ class Train:
         self.discriminator_opt = Adam(
             list(self.A_Discriminator.parameters()) + list(self.B_Discriminator.parameters()), self.lr)
 
+        self.cycle_loss = torch.nn.L1Loss()
+
     def forward(self, real_a, real_b):
         real_a = np.expand_dims(real_a, axis=0)
         real_b = np.expand_dims(real_b, axis=0)
@@ -32,3 +34,34 @@ class Train:
         recycle_b = self.A_Generator(fake_a)
 
         return fake_a, recycle_a, fake_b, recycle_b
+
+    def calculate_generator_loss(self, real_a, fake_a, recycle_a, real_b, fake_b, recycle_b, lam=10):
+
+        for net in [self.A_Discriminator, self.B_Discriminator]:
+            if net is not None:
+                for param in net.parameters():
+                    param.requires_grad = False
+
+        a_gan_loss = ((self.A_Discriminator(fake_b) - 1) ** 2).mean()
+        b_gan_loss = ((self.A_Discriminator(fake_a) - 1) ** 2).mean()
+
+        a_cycle_loss = self.cycle_loss(recycle_a, real_a)
+        b_cycle_loss = self.cycle_loss(recycle_b, real_b)
+
+        full_obj = a_gan_loss + b_gan_loss + lam * (a_cycle_loss + b_cycle_loss)
+
+        return full_obj
+
+    def optimize_generator(self, generator_loss):
+        self.generator_opt.zero_grad()
+        generator_loss.backward()
+        self.generator_opt.step()
+
+    def calculate_discriminator_loss(self, real_a, fake_a, recycle_a, real_b, fake_b, recycle_b, lam=10):
+
+        for net in [self.A_Discriminator, self.B_Discriminator]:
+            if net is not None:
+                for param in net.parameters():
+                    param.requires_grad = False
+
+        pass
