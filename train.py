@@ -44,8 +44,6 @@ class Train:
         fake_a = self.B_Generator(real_b)
         recycle_b = self.A_Generator(fake_a)
 
-        self.add_to_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
-
         return fake_a, recycle_a, fake_b, recycle_b
 
     def calculate_generator_loss(self, real_a, fake_a, recycle_a, real_b, fake_b, recycle_b, lam=10):
@@ -61,7 +59,7 @@ class Train:
                     param.requires_grad = False
 
         a_gan_loss = ((self.A_Discriminator(fake_b) - 1) ** 2).mean()
-        b_gan_loss = ((self.A_Discriminator(fake_a) - 1) ** 2).mean()
+        b_gan_loss = ((self.B_Discriminator(fake_a) - 1) ** 2).mean()
 
         a_cycle_loss = self.cycle_loss(recycle_a, real_a)
         b_cycle_loss = self.cycle_loss(recycle_b, real_b)
@@ -104,19 +102,20 @@ class Train:
         self.discriminator_opt.step()
         self.discriminator_scheduler.step()
 
-    def get_history(self):
-        if len(self.A_fake_history) >= 50:
-            return random.sample(self.A_fake_history, 50), random.sample(self.B_fake_history, 50)
+    def get_history(self, fake_a, fake_b):
+        if len(self.A_fake_history) == 0:
+            while len(self.A_fake_history) < 50:
+                self.A_fake_history.append(fake_a)
+                self.B_fake_history.append(fake_b)
+            return np.vstack(self.A_fake_history), np.vstack(self.B_fake_history)
         else:
-            return random.sample(self.A_fake_history, len(self.A_fake_history)),\
-                   random.sample(self.B_fake_history, len(self.B_fake_history))
-
-    def add_to_history(self, fake_a, fake_b):
-        if len(self.A_fake_history) < 1000:
-            self.A_fake_history.append(fake_a)
-            self.B_fake_history.append(fake_b)
-        else:
-            _ = self.A_fake_history.pop()
-            _ = self.B_fake_history.pop()
-            self.A_fake_history.append(fake_a)
-            self.B_fake_history.append(fake_b)
+            p = random.uniform(0, 1)
+            if p < 0.5:
+                rnd_idx = random.randint(0, len(self.A_fake_history) - 1)
+                a_fake_history = self.A_fake_history[rnd_idx].clone()
+                b_fake_history = self.B_fake_history[rnd_idx].clone()
+                self.A_fake_history[rnd_idx] = fake_a
+                self.B_fake_history[rnd_idx] = fake_b
+                return a_fake_history, b_fake_history
+            else:
+                return fake_a, fake_b

@@ -18,15 +18,16 @@ for epoch in range(200):
     idx_a = random.randint(0, len(trainA) - 1)
     idx_b = random.randint(0, len(trainB) - 1)
     fake_a, recycle_a, fake_b, recycle_b = train.forward(trainA[idx_a], trainB[idx_b])
+    # train.add_to_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
     generator_loss = train.calculate_generator_loss(trainA[idx_a], fake_a, recycle_a, trainB[idx_b], fake_b, recycle_b)
     train.optimize_generator(generator_loss)
 
-    history_fake_a, history_fake_b = train.get_history()
+    history_fake_a, history_fake_b = train.get_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
 
     # if history_fake_a is not None:
     a_dis_loss, b_dis_loss = train.calculate_discriminator_loss(
-        trainA[idx_a], np.vstack(history_fake_a),
-        trainB[idx_b], np.vstack(history_fake_a))
+        trainA[idx_a], history_fake_a,
+        trainB[idx_b], history_fake_b)
 
     train.optimize_discriminator(a_dis_loss, b_dis_loss)
 
@@ -36,6 +37,6 @@ for epoch in range(200):
           f"duration:{time.time() - start_time:3.3f}| "
           f"generator lr:{train.generator_scheduler.get_last_lr()}| "
           f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
-    # if epoch % 50 == 0:
+    # if epoch % 25 == 0:
     #     I = fake_b.squeeze(dim=0).permute([1, 2, 0]).detach().cpu().numpy()
     #     cv2.imwrite(f"step{epoch}.png", I * 0.5 + 0.5)
