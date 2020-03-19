@@ -79,7 +79,7 @@ class ConvNormRelu(nn.Module):
         if self.activation == "relu":
             return F.relu(x)
         elif self.activation == "leaky relu":
-            return F.leaky_relu(x, 0.2)
+            return F.leaky_relu(x, 0.2, True)
         elif self.activation == "tanh":
             return F.tanh(x)
 
@@ -150,9 +150,9 @@ class ResNet(nn.Module):
         self.kernel_size = kernel_size
 
         self.conv_relu_norm1 = ConvNormRelu(self.in_channels, self.in_channels,
-                                            self.kernel_size, conv_padding=0, reflect_padding=1)
+                                            self.kernel_size, conv_padding=0, reflect_padding=1, do_norm=False)
         self.conv_relu_norm2 = ConvNormRelu(self.in_channels, self.in_channels,
-                                            self.kernel_size, conv_padding=0, reflect_padding=1)
+                                            self.kernel_size, conv_padding=0, reflect_padding=1, do_norm=False)
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):

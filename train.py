@@ -34,7 +34,6 @@ class Train:
         self.generator_scheduler = LambdaLR(self.generator_opt, lr_lambda=self.scheduler)
         self.discriminator_scheduler = LambdaLR(self.discriminator_opt, lr_lambda=self.scheduler)
 
-
     def forward(self, real_a, real_b):
         real_a = np.expand_dims(real_a, axis=0)
         real_b = np.expand_dims(real_b, axis=0)
@@ -59,8 +58,8 @@ class Train:
                 for param in net.parameters():
                     param.requires_grad = False
 
-        a_gan_loss = 0.5 * ((self.A_Discriminator(fake_b) - 1) ** 2).mean()
-        b_gan_loss = 0.5 * ((self.B_Discriminator(fake_a) - 1) ** 2).mean()
+        a_gan_loss = ((self.A_Discriminator(fake_b) - 1) ** 2).mean()
+        b_gan_loss = ((self.B_Discriminator(fake_a) - 1) ** 2).mean()
 
         a_cycle_loss = self.cycle_loss(recycle_a, real_a)
         b_cycle_loss = self.cycle_loss(recycle_b, real_b)
@@ -89,10 +88,10 @@ class Train:
                 for param in net.parameters():
                     param.requires_grad = True
 
-        a_dis_loss = 0.5 * ((self.A_Discriminator(real_b) - 1) ** 2).mean() + \
-                     (self.A_Discriminator(history_fake_b) ** 2).mean()
-        b_dis_loss = 0.5 * ((self.B_Discriminator(real_a) - 1) ** 2).mean() + \
-                     (self.B_Discriminator(history_fake_a) ** 2).mean()
+        a_dis_loss = 0.5 * (((self.A_Discriminator(real_b) - 1) ** 2).mean() + \
+                            (self.A_Discriminator(history_fake_b) ** 2).mean())
+        b_dis_loss = 0.5 * (((self.B_Discriminator(real_a) - 1) ** 2).mean() + \
+                            (self.B_Discriminator(history_fake_a) ** 2).mean())
 
         return a_dis_loss, b_dis_loss
 
@@ -109,6 +108,7 @@ class Train:
                 self.A_fake_history.append(fake_a)
                 self.B_fake_history.append(fake_b)
             return np.vstack(self.A_fake_history), np.vstack(self.B_fake_history)
+            # return fake_a, fake_b
         else:
             p = random.uniform(0, 1)
             if p < 0.5:

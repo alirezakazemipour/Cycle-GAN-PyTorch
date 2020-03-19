@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 A_images_dir = glob.glob("./dataset/A/trainA/*.jpg")
 B_images_dir = glob.glob("./dataset/B/trainB/*.jpg")
 
-trainA = [cv2.imread(dir) / 255.0 for dir in A_images_dir]
-trainB = [cv2.imread(dir) / 255.0 for dir in B_images_dir]
+trainA = [cv2.imread(dir).astype(np.float) / 255.0 for dir in A_images_dir]
+trainB = [cv2.imread(dir).astype(np.float) / 255.0 for dir in B_images_dir]
 
 train = Train(3)
 for epoch in range(200):
