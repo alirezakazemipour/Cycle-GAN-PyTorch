@@ -41,6 +41,7 @@ class Generator(nn.Module):
 
         return self.conv_tanh_norm(x)
 
+
 #  region ConvNormRelu
 
 
@@ -81,6 +82,8 @@ class ConvNormRelu(nn.Module):
             return F.leaky_relu(x, 0.2)
         elif self.activation == "tanh":
             return F.tanh(x)
+
+
 #  endregion
 
 
@@ -99,7 +102,7 @@ class DownSample(nn.Module):
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight)
+                nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
     def forward(self, x):

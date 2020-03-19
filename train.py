@@ -4,6 +4,7 @@ from torch.optim import Adam
 from torch import from_numpy
 import numpy as np
 import random
+from torch.optim.lr_scheduler import LambdaLR
 
 
 class Train:
@@ -18,14 +19,20 @@ class Train:
         self.B_Generator = Generator(self.n_channels).to(self.device)
         self.B_Discriminator = Discriminator(self.n_channels).to(self.device)
 
-        self.generator_opt = Adam(list(self.A_Generator.parameters()) + list(self.B_Generator.parameters()), self.lr)
+        self.generator_opt = Adam(list(self.A_Generator.parameters()) + list(self.B_Generator.parameters()), self.lr,
+                                  betas=(0.5, 0.999))
         self.discriminator_opt = Adam(
-            list(self.A_Discriminator.parameters()) + list(self.B_Discriminator.parameters()), self.lr)
+            list(self.A_Discriminator.parameters()) + list(self.B_Discriminator.parameters()), self.lr,
+            betas=(0.5, 0.999))
 
         self.cycle_loss = torch.nn.L1Loss()
 
         self.A_fake_history = []
         self.B_fake_history = []
+
+        self.scheduler = lambda step: 1 if step < 100 else max(1 - 1e-2 * (step - 100), 0)
+        self.generator_scheduler = LambdaLR(self.generator_opt, lr_lambda=self.scheduler)
+        self.discriminator_scheduler = LambdaLR(self.discriminator_opt, lr_lambda=self.scheduler)
 
     def forward(self, real_a, real_b):
         real_a = np.expand_dims(real_a, axis=0)
@@ -67,6 +74,7 @@ class Train:
         self.generator_opt.zero_grad()
         generator_loss.backward()
         self.generator_opt.step()
+        self.generator_scheduler.step()
 
     def calculate_discriminator_loss(self, real_a, history_fake_a, real_b, history_fake_b):
 
@@ -94,12 +102,14 @@ class Train:
         a_dis_loss.backward()
         b_dis_loss.backward()
         self.discriminator_opt.step()
+        self.discriminator_scheduler.step()
 
     def get_history(self):
         if len(self.A_fake_history) >= 50:
             return random.sample(self.A_fake_history, 50), random.sample(self.B_fake_history, 50)
         else:
-            return None, None
+            return random.sample(self.A_fake_history, len(self.A_fake_history)),\
+                   random.sample(self.B_fake_history, len(self.B_fake_history))
 
     def add_to_history(self, fake_a, fake_b):
         if len(self.A_fake_history) < 1000:
