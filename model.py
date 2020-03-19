@@ -67,7 +67,7 @@ class ConvNormRelu(nn.Module):
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight)
+                nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
     def forward(self, x):
@@ -129,7 +129,7 @@ class UpSample(nn.Module):
 
         for layer in self.modules():
             if isinstance(layer, nn.ConvTranspose2d):
-                nn.init.normal_(layer.weight)
+                nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
     def forward(self, x):
@@ -156,7 +156,7 @@ class ResNet(nn.Module):
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight)
+                nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
     def forward(self, inputs):
