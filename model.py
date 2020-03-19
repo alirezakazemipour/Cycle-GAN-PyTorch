@@ -82,10 +82,11 @@ class ConvNormRelu(nn.Module):
             return F.leaky_relu(x, 0.2, True)
         elif self.activation == "tanh":
             return F.tanh(x)
+        elif self.activation == "None":
+            return x
 
 
 #  endregion
-
 
 #  region DownSample
 
@@ -150,14 +151,9 @@ class ResNet(nn.Module):
         self.kernel_size = kernel_size
 
         self.conv_relu_norm1 = ConvNormRelu(self.in_channels, self.in_channels,
-                                            self.kernel_size, conv_padding=0, reflect_padding=1, do_norm=False)
+                                            self.kernel_size, conv_padding=0, reflect_padding=1)
         self.conv_relu_norm2 = ConvNormRelu(self.in_channels, self.in_channels,
-                                            self.kernel_size, conv_padding=0, reflect_padding=1, do_norm=False)
-
-        for layer in self.modules():
-            if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight, 0, 0.02)
-                layer.bias.data.zero_()
+                                            self.kernel_size, conv_padding=0, reflect_padding=1, activation="None")
 
     def forward(self, inputs):
         x = self.conv_relu_norm1(inputs)
@@ -191,4 +187,4 @@ class Discriminator(nn.Module):
         x = self.C64(inputs)
         for i in range(len(self.conv_leakyrelu_norms)):
             x = self.conv_leakyrelu_norms[i](x)
-        return self.output(x)
+        return self.output(x).view(x.size(0), -1)

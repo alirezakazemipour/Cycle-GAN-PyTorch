@@ -107,8 +107,8 @@ class Train:
             while len(self.A_fake_history) < 50:
                 self.A_fake_history.append(fake_a)
                 self.B_fake_history.append(fake_b)
-            return np.vstack(self.A_fake_history), np.vstack(self.B_fake_history)
-            # return fake_a, fake_b
+            # return np.vstack(self.A_fake_history), np.vstack(self.B_fake_history)
+            return fake_a, fake_b
         else:
             p = random.uniform(0, 1)
             if p < 0.5:
