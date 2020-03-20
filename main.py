@@ -4,6 +4,7 @@ import random
 from train import Train
 import numpy as np
 import time
+import imageio
 
 A_images_dir = glob.glob("./dataset/A/trainA/*.jpg")
 B_images_dir = glob.glob("./dataset/B/trainB/*.jpg")
@@ -31,7 +32,7 @@ def random_crop(image):
 def random_jitter(image):
     image = cv2.resize(image, (286, 286), interpolation=cv2.INTER_NEAREST)
     image = random_crop(image)
-    image = normalize_img(image)
+    # image = normalize_img(image)
     p = random.uniform(0, 1)
     if p > 0.5:
         image = cv2.flip(image, 1)
@@ -39,7 +40,7 @@ def random_jitter(image):
 
 
 def preprocess_image_train(image):
-    # image = random_jitter(image)
+    image = random_jitter(image)
     image = normalize_img(image)
     return image
 
@@ -76,4 +77,4 @@ for epoch in range(200):
           f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
     if epoch % 25 == 0:
         I = fake_b.squeeze(dim=0).permute([1, 2, 0]).detach().cpu().numpy()
-        cv2.imwrite(f"step{epoch}.png", I * 0.5 + 0.5)
+        imageio.imwrite(f"step{epoch}.png", I * 0.5 + 0.5)

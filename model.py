@@ -7,140 +7,73 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.n_channels = n_channels
 
-        self.conv_relu_norm = ConvNormRelu(self.n_channels, 64, conv_padding=0).cuda()
+        self.pad1 = nn.ReflectionPad2d(3)
+        self.c7s1_64 = nn.Conv2d(in_channels=self.n_channels,
+                                 out_channels=64,
+                                 kernel_size=7,
+                                 padding=0)
+        self.norm1 = nn.InstanceNorm2d(64)
 
-        self.n_ds_layers = 2
-        input_ds_channel = 64
-        self.down_samples = []
-        for _ in range(self.n_ds_layers):
-            down_sample = DownSample(n_channels=input_ds_channel, n_filters=2 * input_ds_channel).cuda()
-            self.down_samples.append(down_sample)
-            input_ds_channel = 2 * input_ds_channel
+        self.d128 = nn.Conv2d(64, 128, 3, 2, 1)
+        self.norm2 = nn.InstanceNorm2d(128)
 
-        self.n_resnet_layers = 9
-        self.resnet_layers = [ResNet().cuda() for _ in range(self.n_resnet_layers)]
+        self.d256 = nn.Conv2d(128, 256, 3, 2, 1)
+        self.norm3 = nn.InstanceNorm2d(256)
 
-        self.up_samples = []
-        for _ in range(self.n_ds_layers):
-            up_sample = UpSample(n_channels=int(input_ds_channel), n_filters=int(input_ds_channel / 2)).cuda()
-            self.up_samples.append(up_sample)
-            input_ds_channel = input_ds_channel / 2
+        self.resnet_layers = [ResNet().cuda() for _ in range(9)]
 
-        self.conv_tanh_norm = ConvNormRelu(int(input_ds_channel), 3,
-                                           activation="tanh", conv_padding=0, do_norm=False).cuda()
+        self.u128 = nn.ConvTranspose2d(in_channels=256,
+                                       out_channels=128,
+                                       kernel_size=3,
+                                       stride=2,
+                                       padding=1,
+                                       output_padding=1)
+        self.norm4 = nn.InstanceNorm2d(128)
 
-    def forward(self, inputs):
-        x = self.conv_relu_norm(inputs)
-        for i in range(self.n_ds_layers):
-            x = self.down_samples[i](x)
+        self.u64 = nn.ConvTranspose2d(in_channels=128,
+                                      out_channels=64,
+                                      kernel_size=3,
+                                      stride=2,
+                                      padding=1,
+                                      output_padding=1)
+        self.norm5 = nn.InstanceNorm2d(64)
 
-        for i in range(self.n_resnet_layers):
-            x = self.resnet_layers[i](x)
-
-        for i in range(self.n_ds_layers):
-            x = self.up_samples[i](x)
-
-        return self.conv_tanh_norm(x)
-
-
-#  region ConvNormRelu
-
-
-class ConvNormRelu(nn.Module):
-    def __init__(self, n_channels, n_filters, kernel_size=7, stride=1, do_reflect_padding=True,
-                 reflect_padding=3, conv_padding=1, activation="relu", do_norm=True):
-        super(ConvNormRelu, self).__init__()
-        self.activation = activation
-        self.do_norm = do_norm
-        self.do_reflect_padding = do_reflect_padding
-        self.n_channels = n_channels
-        self.n_filters = n_filters
-        self.kernel_size = kernel_size
-
-        self.padding = nn.ReflectionPad2d(reflect_padding)
-        self.conv = nn.Conv2d(in_channels=self.n_channels,
-                              out_channels=self.n_filters,
-                              kernel_size=self.kernel_size,
-                              stride=stride,
-                              padding=conv_padding)
-
-        self.norm = nn.InstanceNorm2d(n_filters)
-
-        for layer in self.modules():
-            if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight, 0, 0.02)
-                layer.bias.data.zero_()
-
-    def forward(self, x):
-        if self.do_reflect_padding:
-            x = self.padding(x)
-        x = self.conv(x)
-        if self.do_norm:
-            x = self.norm(x)
-        if self.activation == "relu":
-            return F.relu(x)
-        elif self.activation == "leaky relu":
-            return F.leaky_relu(x, 0.2, True)
-        elif self.activation == "tanh":
-            return F.tanh(x)
-        elif self.activation == "None":
-            return x
-
-
-#  endregion
-
-#  region DownSample
-
-
-class DownSample(nn.Module):
-    def __init__(self, n_channels, n_filters, kernel_size=3, stride=2):
-        super(DownSample, self).__init__()
-        self.conv = nn.Conv2d(in_channels=n_channels,
-                              out_channels=n_filters,
-                              kernel_size=kernel_size,
-                              stride=stride,
-                              padding=1)
-        self.norm = nn.InstanceNorm2d(n_filters)
-
-        for layer in self.modules():
-            if isinstance(layer, nn.Conv2d):
-                nn.init.normal_(layer.weight, 0, 0.02)
-                layer.bias.data.zero_()
-
-    def forward(self, x):
-        x = self.conv(x)
-        x = self.norm(x)
-        return F.relu(x)
-
-
-#  endregion
-
-#  region UpSample
-
-
-class UpSample(nn.Module):
-    def __init__(self, n_channels, n_filters, kernel_size=3, stride=2):
-        super(UpSample, self).__init__()
-        self.deconv = nn.ConvTranspose2d(in_channels=n_channels,
-                                         out_channels=n_filters,
-                                         kernel_size=kernel_size,
-                                         stride=stride,
-                                         padding=1,
-                                         output_padding=1)
-        self.norm = nn.InstanceNorm2d(n_filters)
+        self.pad2 = nn.ReflectionPad2d(3)
+        self.output = nn.Conv2d(in_channels=64,
+                                out_channels=3,
+                                kernel_size=7,
+                                padding=0)
 
         for layer in self.modules():
             if isinstance(layer, nn.ConvTranspose2d):
                 nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
-    def forward(self, x):
-        x = self.deconv(x)
-        x = self.norm(x)
-        return F.relu(x)
+    def forward(self, inputs):
+        x = self.pad1(inputs)
+        x = self.c7s1_64(x)
+        x = F.relu(self.norm1(x))
 
+        x = self.d128(x)
+        x = F.relu(self.norm2(x))
 
-#  endregion
+        x = self.d256(x)
+        x = F.relu(self.norm3(x))
+
+        for layer in self.resnet_layers:
+            x = layer(x)
+
+        x = self.u128(x)
+        x = F.relu(self.norm4(x))
+
+        x = self.u64(x)
+        x = F.relu(self.norm5(x))
+
+        x = self.pad2(x)
+        x = self.output(x)
+
+        return F.tanh(x)
+
 
 # region ResNet
 
@@ -151,15 +84,29 @@ class ResNet(nn.Module):
         self.in_channels = in_channels
         self.kernel_size = kernel_size
 
-        self.conv_relu_norm1 = ConvNormRelu(self.in_channels, self.in_channels,
-                                            self.kernel_size, conv_padding=0, reflect_padding=1)
-        self.conv_relu_norm2 = ConvNormRelu(self.in_channels, self.in_channels,
-                                            self.kernel_size, conv_padding=0, reflect_padding=1, activation="None")
+        self.pad1 = nn.ReflectionPad2d(1)
+        self.conv1 = nn.Conv2d(256, 256, 3, padding=0)
+        self.norm1 = nn.InstanceNorm2d(256)
+
+        self.pad2 = nn.ReflectionPad2d(1)
+        self.conv2 = nn.Conv2d(256, 256, 3, padding=0)
+        self.norm2 = nn.InstanceNorm2d(256)
+
+        for layer in self.modules():
+            if isinstance(layer, nn.ConvTranspose2d):
+                nn.init.normal_(layer.weight, 0, 0.02)
+                layer.bias.data.zero_()
 
     def forward(self, inputs):
-        x = self.conv_relu_norm1(inputs)
-        x = self.conv_relu_norm2(x)
-        return inputs + x
+        x = self.pad1(inputs)
+        x = self.conv1(x)
+        x = F.relu(self.norm1(x))
+
+        x = self.pad2(x)
+        x = self.conv2(x)
+        x = self.norm2(x)
+
+        return F.relu(inputs + x)
 
 
 # endregion
@@ -169,30 +116,55 @@ class Discriminator(nn.Module):
     def __init__(self, n_channels):
         super(Discriminator, self).__init__()
         self.n_channels = n_channels
-        filters = [64, 128, 256, 512]
 
-        self.C64 = ConvNormRelu(n_channels=self.n_channels, n_filters=filters[0], kernel_size=4, stride=2,
-                                do_reflect_padding=False, activation="leaky relu", do_norm=False).cuda()
+        self.c64 = nn.Conv2d(in_channels=3,
+                             out_channels=64,
+                             kernel_size=4,
+                             stride=2,
+                             padding=1)
 
-        self.conv_leakyrelu_norms = []
-        for idx, filter in enumerate(filters[:-2]):
-            C = ConvNormRelu(filter, filters[idx + 1], 4, 2, do_reflect_padding=False,
-                             activation="leaky relu", do_norm=True).cuda()
-            self.conv_leakyrelu_norms.append(C)
+        self.c128 = nn.Conv2d(in_channels=64,
+                              out_channels=128,
+                              kernel_size=4,
+                              stride=2,
+                              padding=1)
+        self.norm1 = nn.InstanceNorm2d(128)
 
-        C = ConvNormRelu(filters[-2], filters[-1], 4, stride=1, do_reflect_padding=False,
-                         activation="leaky relu", do_norm=True).cuda()
-        self.conv_leakyrelu_norms.append(C)
+        self.c256 = nn.Conv2d(in_channels=128,
+                              out_channels=256,
+                              kernel_size=4,
+                              stride=2,
+                              padding=1)
+        self.norm2 = nn.InstanceNorm2d(256)
 
-        self.output = nn.Conv2d(filters[-1], 1, kernel_size=4, stride=1, padding=1)
-        nn.init.normal_(self.output.weight, 0, 0.02)
-        self.output.bias.data.zero_()
+        self.c512 = nn.Conv2d(in_channels=256,
+                              out_channels=512,
+                              kernel_size=4,
+                              stride=1,
+                              padding=1)
+        self.norm3 = nn.InstanceNorm2d(512)
+
+        self.output = nn.Conv2d(in_channels=512,
+                                out_channels=1,
+                                kernel_size=4,
+                                stride=1,
+                                padding=1)
+
+        for layer in self.modules():
+            if isinstance(layer, nn.ConvTranspose2d):
+                nn.init.normal_(layer.weight, 0, 0.02)
+                layer.bias.data.zero_()
 
     def forward(self, inputs):
-        x = self.C64(inputs)
-        # print(x.shape)
-        for i in range(len(self.conv_leakyrelu_norms)):
-            x = self.conv_leakyrelu_norms[i](x)
-            # print(x.shape)
-        # print(self.output(x).shape)
+        x = F.leaky_relu(self.c64(inputs), 0.2)
+
+        x = self.c128(x)
+        x = F.leaky_relu(self.norm1(x), 0.2)
+
+        x = self.c256(x)
+        x = F.leaky_relu(self.norm2(x), 0.2)
+
+        x = self.c512(x)
+        x = F.leaky_relu(self.norm3(x), 0.2)
+
         return self.output(x)
