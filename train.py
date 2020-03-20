@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import LambdaLR
 class Train:
     def __init__(self, n_channels, lr=2e-4):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # self.device = "cpu"
         self.n_channels = n_channels
         self.lr = lr
 
@@ -26,6 +27,7 @@ class Train:
             betas=(0.5, 0.999))
 
         self.cycle_loss = torch.nn.L1Loss()
+        self.idt_loss = torch.nn.L1Loss()
 
         self.A_fake_history = []
         self.B_fake_history = []
@@ -64,7 +66,12 @@ class Train:
         a_cycle_loss = self.cycle_loss(recycle_a, real_a)
         b_cycle_loss = self.cycle_loss(recycle_b, real_b)
 
-        full_obj = a_gan_loss + b_gan_loss + lam * (a_cycle_loss + b_cycle_loss)
+        idt_A = self.A_Generator(real_b)
+        loss_idt_A = self.idt_loss(idt_A, real_b) * lam * 0.5
+        idt_B = self.B_Generator(real_a)
+        loss_idt_B = self.idt_loss(idt_B, real_a) * lam * 0.5
+
+        full_obj = a_gan_loss + b_gan_loss + lam * (a_cycle_loss + b_cycle_loss) + loss_idt_A + loss_idt_B
 
         return full_obj
 

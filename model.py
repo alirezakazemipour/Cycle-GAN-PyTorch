@@ -26,7 +26,8 @@ class Generator(nn.Module):
             self.up_samples.append(up_sample)
             input_ds_channel = input_ds_channel / 2
 
-        self.conv_tanh_norm = ConvNormRelu(int(input_ds_channel), 3, activation="tanh", conv_padding=0).cuda()
+        self.conv_tanh_norm = ConvNormRelu(int(input_ds_channel), 3,
+                                           activation="tanh", conv_padding=0, do_norm=False).cuda()
 
     def forward(self, inputs):
         x = self.conv_relu_norm(inputs)
@@ -174,10 +175,14 @@ class Discriminator(nn.Module):
                                 do_reflect_padding=False, activation="leaky relu", do_norm=False).cuda()
 
         self.conv_leakyrelu_norms = []
-        for idx, filter in enumerate(filters[:-1]):
+        for idx, filter in enumerate(filters[:-2]):
             C = ConvNormRelu(filter, filters[idx + 1], 4, 2, do_reflect_padding=False,
                              activation="leaky relu", do_norm=True).cuda()
             self.conv_leakyrelu_norms.append(C)
+
+        C = ConvNormRelu(filters[-2], filters[-1], 4, stride=1, do_reflect_padding=False,
+                         activation="leaky relu", do_norm=True).cuda()
+        self.conv_leakyrelu_norms.append(C)
 
         self.output = nn.Conv2d(filters[-1], 1, kernel_size=4, stride=1, padding=1)
         nn.init.normal_(self.output.weight, 0, 0.02)
@@ -185,6 +190,9 @@ class Discriminator(nn.Module):
 
     def forward(self, inputs):
         x = self.C64(inputs)
+        # print(x.shape)
         for i in range(len(self.conv_leakyrelu_norms)):
             x = self.conv_leakyrelu_norms[i](x)
-        return self.output(x).view(x.size(0), -1)
+            # print(x.shape)
+        # print(self.output(x).shape)
+        return self.output(x)
