@@ -1,5 +1,6 @@
 from torch import nn
 import torch.nn.functional as F
+import torch
 
 
 class Generator(nn.Module):
@@ -48,6 +49,9 @@ class Generator(nn.Module):
             if isinstance(layer, nn.ConvTranspose2d):
                 nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
+            elif isinstance(layer, nn.Conv2d):
+                nn.init.normal_(layer.weight, 0, 0.02)
+                layer.bias.data.zero_()
 
     def forward(self, inputs):
         x = self.pad1(inputs)
@@ -72,7 +76,7 @@ class Generator(nn.Module):
         x = self.pad2(x)
         x = self.output(x)
 
-        return F.tanh(x)
+        return torch.tanh(x)
 
 
 # region ResNet
@@ -93,7 +97,7 @@ class ResNet(nn.Module):
         self.norm2 = nn.InstanceNorm2d(256)
 
         for layer in self.modules():
-            if isinstance(layer, nn.ConvTranspose2d):
+            if isinstance(layer, nn.Conv2d):
                 nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
@@ -106,7 +110,7 @@ class ResNet(nn.Module):
         x = self.conv2(x)
         x = self.norm2(x)
 
-        return F.relu(inputs + x)
+        return inputs + x
 
 
 # endregion
@@ -151,7 +155,7 @@ class Discriminator(nn.Module):
                                 padding=1)
 
         for layer in self.modules():
-            if isinstance(layer, nn.ConvTranspose2d):
+            if isinstance(layer, nn.Conv2d):
                 nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
