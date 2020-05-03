@@ -21,7 +21,8 @@ trainB = []
 
 
 def train_processing(dir):
-    I = cv2.imread(dir, cv2.COLOR_BGR2RGB)
+    I = cv2.imread(dir)
+    I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
     return I
 
 
@@ -110,10 +111,10 @@ for epoch in range(ep, 200 + 1):
     train.schedule_optimizers()
     train.save_weights(epoch)
 
-    if epoch % 5 == 0:
+    if epoch % 1 == 0:
         I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()
         image_numpy = (I + 1.0) / 2.0
-        image_numpy = cv2.cvtColor(image_numpy, cv2.COLOR_BGR2RGB)
+        # image_numpy = cv2.cvtColor(image_numpy, cv2.COLOR_BGR2RGB)
         imageio.imwrite(f"step_a{epoch}.png", image_numpy)
         imageio.imwrite(f"step_a{epoch}_real.png", cv2.cvtColor(trainA[idx_a], cv2.COLOR_BGR2RGB))
 
