@@ -15,10 +15,18 @@ class Generator(nn.Module):
                                  padding=0)
         self.norm1 = nn.InstanceNorm2d(64)
 
-        self.d128 = nn.Conv2d(64, 128, 3, 2, 1)
+        self.d128 = nn.Conv2d(in_channels=64,
+                              out_channels=128,
+                              kernel_size=3,
+                              stride=2,
+                              padding=1)
         self.norm2 = nn.InstanceNorm2d(128)
 
-        self.d256 = nn.Conv2d(128, 256, 3, 2, 1)
+        self.d256 = nn.Conv2d(in_channels=128,
+                              out_channels=256,
+                              kernel_size=3,
+                              stride=2,
+                              padding=1)
         self.norm3 = nn.InstanceNorm2d(256)
 
         self.resnet_layers = [ResNet().cuda() for _ in range(9)]
@@ -44,6 +52,7 @@ class Generator(nn.Module):
                                 out_channels=3,
                                 kernel_size=7,
                                 padding=0)
+        self.norm6 = nn.InstanceNorm2d(3)
 
         for layer in self.modules():
             if isinstance(layer, nn.ConvTranspose2d):
@@ -75,6 +84,7 @@ class Generator(nn.Module):
 
         x = self.pad2(x)
         x = self.output(x)
+        x = self.norm6(x)
 
         return torch.tanh(x)
 
@@ -110,7 +120,7 @@ class ResNet(nn.Module):
         x = self.conv2(x)
         x = self.norm2(x)
 
-        return inputs + x
+        return F.relu(inputs + x)
 
 
 # endregion

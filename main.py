@@ -7,6 +7,8 @@ import time
 import imageio
 from concurrent import futures
 import os
+import pickle
+from tqdm import tqdm
 
 
 A_images_dir = glob.glob(
@@ -20,23 +22,29 @@ trainA = []
 trainB = []
 
 
-def train_processing(dir):
-    I = cv2.imread(dir)
-    I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
-    return I
+# def train_processing(dir):
+#     I = cv2.imread(dir)
+#     I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
+#     return I
 
 
-with futures.ProcessPoolExecutor() as executor:
-    results = executor.map(train_processing, A_images_dir)
+# with futures.ProcessPoolExecutor() as executor:
+#     results = executor.map(train_processing, A_images_dir)
 
-    for result in results:
-        trainA.append(result)
+#     for result in results:
+#         trainA.append(result)
 
-with futures.ProcessPoolExecutor() as executor:
-    results = executor.map(train_processing, B_images_dir)
+# with futures.ProcessPoolExecutor() as executor:
+#     results = executor.map(train_processing, B_images_dir)
 
-    for result in results:
-        trainB.append(result)
+#     for result in results:
+#         trainB.append(result)
+with open('trainA_dataset.pickle', 'rb') as f:
+    trainA = pickle.load(f)
+
+with open('trainB_dataset.pickle', 'rb') as f:
+    trainB = pickle.load(f)
+
 
 
 def normalize_img(image):
@@ -75,13 +83,13 @@ def preprocess_image_train(a, b):
 
 
 train = Train(3)
-ep = 0
+ep = 1
 if os.path.exists("CycleGan.pth"):
-    ep = train.load_weights("CycleGan.pth")
+    ep = train.load_weights("CycleGan.pth") + 1
     print("Checkpoint loaded")
 
 for epoch in range(ep, 200 + 1):
-    for _ in range(min(len(A_images_dir), len(B_images_dir))):
+    for step in tqdm(range(min(len(A_images_dir), len(B_images_dir)))):
         start_time = time.time()
         idx_a = random.randint(0, len(trainA) - 1)
         idx_b = random.randint(0, len(trainB) - 1)
@@ -100,21 +108,22 @@ for epoch in range(ep, 200 + 1):
             trainB[idx_b], history_fake_b)
 
         train.optimize_discriminator(a_dis_loss, b_dis_loss)
+        # print(f"Step:{step}| "
+        #       f"Date:{time.time() - start_time:3.3f}")
 
     print(f"Epoch:{epoch}| "
           f"generator_loss:{generator_loss.item():3.3f}| "
           f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():3.3f}| "
           f"duration:{time.time() - start_time:3.3f}| "
           f"generator lr:{train.generator_scheduler.get_lr()}| "
-          f"discriminator lr:{train.discriminator_scheduler.get_lr()}")
+          f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
 
     train.schedule_optimizers()
     train.save_weights(epoch)
 
-    if epoch % 1 == 0:
+    if epoch % 10 == 0:
         I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()
         image_numpy = (I + 1.0) / 2.0
-        # image_numpy = cv2.cvtColor(image_numpy, cv2.COLOR_BGR2RGB)
         imageio.imwrite(f"step_a{epoch}.png", image_numpy)
-        imageio.imwrite(f"step_a{epoch}_real.png", cv2.cvtColor(trainA[idx_a], cv2.COLOR_BGR2RGB))
+        imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a])
 

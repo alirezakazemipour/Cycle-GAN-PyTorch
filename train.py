@@ -11,7 +11,8 @@ from copy import deepcopy
 
 class Train:
     def __init__(self, n_channels, lr=2e-4):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        torch.cuda.empty_cache()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.n_channels = n_channels
         self.lr = lr
 
@@ -96,9 +97,9 @@ class Train:
                 for param in net.parameters():
                     param.requires_grad = True
 
-        a_dis_loss = 0.5 * (((self.A_Discriminator(real_b) - 1) ** 2).mean() + \
+        a_dis_loss = 0.5 * (((self.A_Discriminator(real_b) - 1) ** 2).mean() +
                             (self.A_Discriminator(history_fake_b) ** 2).mean())
-        b_dis_loss = 0.5 * (((self.B_Discriminator(real_a) - 1) ** 2).mean() + \
+        b_dis_loss = 0.5 * (((self.B_Discriminator(real_a) - 1) ** 2).mean() +
                             (self.B_Discriminator(history_fake_a) ** 2).mean())
 
         return a_dis_loss, b_dis_loss
@@ -114,22 +115,19 @@ class Train:
         self.discriminator_scheduler.step()
 
     def get_history(self, fake_a, fake_b):
-        if len(self.A_fake_history) == 0:
-            while len(self.A_fake_history) < 50:
-                self.A_fake_history.append(fake_a)
-                self.B_fake_history.append(fake_b)
+        if len(self.A_fake_history) < 50:
+            self.A_fake_history.append(fake_a)
+            self.B_fake_history.append(fake_b)
             return fake_a, fake_b
+        elif random.uniform(0, 1) < 0.5:
+            rnd_idx = random.randint(0, len(self.A_fake_history) - 1)
+            a_fake_history = deepcopy(self.A_fake_history[rnd_idx])
+            b_fake_history = deepcopy(self.B_fake_history[rnd_idx])
+            self.A_fake_history[rnd_idx] = fake_a.copy()
+            self.B_fake_history[rnd_idx] = fake_b.copy()
+            return a_fake_history, b_fake_history
         else:
-            p = random.uniform(0, 1)
-            if p < 0.5:
-                rnd_idx = random.randint(0, len(self.A_fake_history) - 1)
-                a_fake_history = deepcopy(self.A_fake_history[rnd_idx])
-                b_fake_history = deepcopy(self.B_fake_history[rnd_idx])
-                self.A_fake_history[rnd_idx] = fake_a
-                self.B_fake_history[rnd_idx] = fake_b
-                return a_fake_history, b_fake_history
-            else:
-                return fake_a, fake_b
+            return fake_a, fake_b
 
     def save_weights(self, epoch):
         torch.save({"A_Generator_dict": self.A_Generator.state_dict(),
