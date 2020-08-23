@@ -10,41 +10,41 @@ import os
 import pickle
 from tqdm import tqdm
 
-
 A_images_dir = glob.glob(
     "horse2zebra/trainA/*.jpg")
 B_images_dir = glob.glob(
     "horse2zebra/trainB/*.jpg")
 
-# trainA = [cv2.imread(dir) for dir in A_images_dir]
-# trainB = [cv2.imread(dir) for dir in B_images_dir]
+trainA = [cv2.imread(dir) for dir in A_images_dir]
+trainB = [cv2.imread(dir) for dir in B_images_dir]
 trainA = []
 trainB = []
 
 
-# def train_processing(dir):
-#     I = cv2.imread(dir)
-#     I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
-#     return I
+def train_processing(dir):
+    I = cv2.imread(dir)
+    I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
+    return I
 
 
-# with futures.ProcessPoolExecutor() as executor:
-#     results = executor.map(train_processing, A_images_dir)
+with futures.ProcessPoolExecutor() as executor:
+    results = executor.map(train_processing, A_images_dir)
 
-#     for result in results:
-#         trainA.append(result)
+    for result in results:
+        trainA.append(result)
 
-# with futures.ProcessPoolExecutor() as executor:
-#     results = executor.map(train_processing, B_images_dir)
+with futures.ProcessPoolExecutor() as executor:
+    results = executor.map(train_processing, B_images_dir)
 
-#     for result in results:
-#         trainB.append(result)
-with open('trainA_dataset.pickle', 'rb') as f:
-    trainA = pickle.load(f)
+    for result in results:
+        trainB.append(result)
 
-with open('trainB_dataset.pickle', 'rb') as f:
-    trainB = pickle.load(f)
 
+# with open('trainA_dataset.pickle', 'rb') as f:
+#     trainA = pickle.load(f)
+#
+# with open('trainB_dataset.pickle', 'rb') as f:
+#     trainB = pickle.load(f)
 
 
 def normalize_img(image):
@@ -97,8 +97,8 @@ for epoch in range(ep, 200 + 1):
         A_image, B_image = preprocess_image_train(trainA[idx_a], trainB[idx_b])
 
         fake_a, recycle_a, fake_b, recycle_b = train.forward(A_image, B_image)
-        generator_loss, a_gan_loss, a_cycle_loss, idt_A, b_gan_loss, b_cycle_loss, idt_B = train.calculate_generator_loss(
-            A_image, fake_a, recycle_a, B_image, fake_b, recycle_b)
+        generator_loss, a_gan_loss, a_cycle_loss, idt_A, b_gan_loss, b_cycle_loss, idt_B = \
+            train.calculate_generator_loss(A_image, fake_a, recycle_a, B_image, fake_b, recycle_b)
         train.optimize_generator(generator_loss)
 
         history_fake_a, history_fake_b = train.get_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
@@ -126,4 +126,3 @@ for epoch in range(ep, 200 + 1):
         image_numpy = (I + 1.0) / 2.0
         imageio.imwrite(f"step_a{epoch}.png", image_numpy)
         imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a])
-

@@ -7,18 +7,21 @@ import random
 from torch.optim.lr_scheduler import LambdaLR
 from itertools import chain
 from copy import deepcopy
+from torchsummary import summary
 
 
 class Train:
     def __init__(self, n_channels, lr=2e-4):
         torch.cuda.empty_cache()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
         self.n_channels = n_channels
         self.lr = lr
 
         self.A_Generator = Generator(self.n_channels).to(self.device)
+        summary(self.A_Generator, (3, 256, 256))
         self.A_Discriminator = Discriminator(self.n_channels).to(self.device)
-
+        summary(self.A_Discriminator, (3, 256, 256))
+        # exit(0)
         self.B_Generator = Generator(self.n_channels).to(self.device)
         self.B_Discriminator = Discriminator(self.n_channels).to(self.device)
 
@@ -119,15 +122,16 @@ class Train:
             self.A_fake_history.append(fake_a)
             self.B_fake_history.append(fake_b)
             return fake_a, fake_b
-        elif random.uniform(0, 1) < 0.5:
-            rnd_idx = random.randint(0, len(self.A_fake_history) - 1)
-            a_fake_history = deepcopy(self.A_fake_history[rnd_idx])
-            b_fake_history = deepcopy(self.B_fake_history[rnd_idx])
-            self.A_fake_history[rnd_idx] = fake_a.copy()
-            self.B_fake_history[rnd_idx] = fake_b.copy()
-            return a_fake_history, b_fake_history
         else:
-            return fake_a, fake_b
+            if random.uniform(0, 1) < 0.5:
+                rnd_idx = random.randint(0, len(self.A_fake_history) - 1)
+                a_fake_history = deepcopy(self.A_fake_history[rnd_idx])
+                b_fake_history = deepcopy(self.B_fake_history[rnd_idx])
+                self.A_fake_history[rnd_idx] = fake_a.copy()
+                self.B_fake_history[rnd_idx] = fake_b.copy()
+                return a_fake_history, b_fake_history
+            else:
+                return fake_a, fake_b
 
     def save_weights(self, epoch):
         torch.save({"A_Generator_dict": self.A_Generator.state_dict(),
