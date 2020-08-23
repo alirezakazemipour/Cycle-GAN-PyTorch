@@ -18,17 +18,17 @@ class Train:
         self.lr = lr
 
         self.A_Generator = Generator(self.n_channels).to(self.device)
-        summary(self.A_Generator, (3, 256, 256))
+        # summary(self.A_Generator, (3, 256, 256))
         self.A_Discriminator = Discriminator(self.n_channels).to(self.device)
-        summary(self.A_Discriminator, (3, 256, 256))
+        # summary(self.A_Discriminator, (3, 256, 256))
         # exit(0)
         self.B_Generator = Generator(self.n_channels).to(self.device)
         self.B_Discriminator = Discriminator(self.n_channels).to(self.device)
 
-        self.generator_opt = Adam(chain(self.A_Generator.parameters(), self.B_Generator.parameters()), self.lr,
+        self.generator_opt = Adam(list(self.A_Generator.parameters()) + list(self.B_Generator.parameters()), self.lr,
                                   betas=(0.5, 0.999))
         self.discriminator_opt = Adam(
-            chain(self.A_Discriminator.parameters(), self.B_Discriminator.parameters()), self.lr,
+            list(self.A_Discriminator.parameters()) + list(self.B_Discriminator.parameters()), self.lr,
             betas=(0.5, 0.999))
 
         self.cycle_loss = torch.nn.L1Loss()
@@ -65,7 +65,7 @@ class Train:
             if net is not None:
                 for param in net.parameters():
                     param.requires_grad = False
-
+        self.A_Discriminator.eval()
         a_gan_loss = ((self.A_Discriminator(fake_b) - 1) ** 2).mean()
         b_gan_loss = ((self.B_Discriminator(fake_a) - 1) ** 2).mean()
 

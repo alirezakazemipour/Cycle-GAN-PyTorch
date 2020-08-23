@@ -17,8 +17,8 @@ B_images_dir = glob.glob(
 
 trainA = [cv2.imread(dir) for dir in A_images_dir]
 trainB = [cv2.imread(dir) for dir in B_images_dir]
-trainA = []
-trainB = []
+# trainA = []
+# trainB = []
 
 
 def train_processing(dir):
@@ -27,17 +27,17 @@ def train_processing(dir):
     return I
 
 
-with futures.ProcessPoolExecutor() as executor:
-    results = executor.map(train_processing, A_images_dir)
-
-    for result in results:
-        trainA.append(result)
-
-with futures.ProcessPoolExecutor() as executor:
-    results = executor.map(train_processing, B_images_dir)
-
-    for result in results:
-        trainB.append(result)
+# with futures.ProcessPoolExecutor() as executor:
+#     results = executor.map(train_processing, A_images_dir)
+#
+#     for result in results:
+#         trainA.append(result)
+#
+# with futures.ProcessPoolExecutor() as executor:
+#     results = executor.map(train_processing, B_images_dir)
+#
+#     for result in results:
+#         trainB.append(result)
 
 
 # with open('trainA_dataset.pickle', 'rb') as f:
