@@ -9,6 +9,7 @@ from concurrent import futures
 import os
 import pickle
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 A_images_dir = glob.glob(
     "horse2zebra/trainA/*.jpg")
@@ -17,6 +18,8 @@ B_images_dir = glob.glob(
 
 trainA = [cv2.imread(dir) for dir in A_images_dir]
 trainB = [cv2.imread(dir) for dir in B_images_dir]
+
+
 # trainA = []
 # trainB = []
 
@@ -97,7 +100,7 @@ for epoch in range(ep, 200 + 1):
         A_image, B_image = preprocess_image_train(trainA[idx_a], trainB[idx_b])
 
         fake_a, recycle_a, fake_b, recycle_b = train.forward(A_image, B_image)
-        generator_loss, a_gan_loss, a_cycle_loss, idt_A, b_gan_loss, b_cycle_loss, idt_B = \
+        generator_loss, a_gan_loss, a_cycle_loss, loss_idt_A, b_gan_loss, b_cycle_loss, loss_idt_B = \
             train.calculate_generator_loss(A_image, fake_a, recycle_a, B_image, fake_b, recycle_b)
         train.optimize_generator(generator_loss)
 
@@ -110,6 +113,15 @@ for epoch in range(ep, 200 + 1):
         train.optimize_discriminator(a_dis_loss, b_dis_loss)
         # print(f"Step:{step}| "
         #       f"Date:{time.time() - start_time:3.3f}")
+        with SummaryWriter("logs/") as writer:
+            writer.add_scalar("A_GAN_Loss", a_gan_loss, epoch * step)
+            writer.add_scalar("A_Recycle_Loss", a_cycle_loss, epoch * step)
+            writer.add_scalar("A_Identity_Loss", loss_idt_A, epoch * step)
+            writer.add_scalar("A_Dis_Loss", a_dis_loss, epoch * step)
+            writer.add_scalar("B_GAN_Loss", b_gan_loss, epoch * step)
+            writer.add_scalar("B_Recycle_Loss", b_cycle_loss, epoch * step)
+            writer.add_scalar("B_Identity_Loss", loss_idt_B, epoch * step)
+            writer.add_scalar("B_Dis_Loss", b_dis_loss, epoch * step)
 
     print(f"Epoch:{epoch}| "
           f"generator_loss:{generator_loss.item():.3f}| "

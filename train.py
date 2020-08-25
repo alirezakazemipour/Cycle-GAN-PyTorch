@@ -78,7 +78,7 @@ class Train:
 
         full_obj = a_gan_loss + b_gan_loss + lam * (a_cycle_loss + b_cycle_loss) + loss_idt_A + loss_idt_B
 
-        return full_obj, a_gan_loss, a_cycle_loss, idt_A, b_gan_loss, b_cycle_loss, idt_B
+        return full_obj, a_gan_loss, a_cycle_loss, loss_idt_A, b_gan_loss, b_cycle_loss, loss_idt_B
 
     def optimize_generator(self, generator_loss):
         self.generator_opt.zero_grad()
