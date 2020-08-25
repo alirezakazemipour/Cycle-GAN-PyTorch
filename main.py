@@ -104,24 +104,24 @@ for epoch in range(ep, 200 + 1):
         history_fake_a, history_fake_b = train.get_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
 
         a_dis_loss, b_dis_loss = train.calculate_discriminator_loss(
-            trainA[idx_a], history_fake_a,
-            trainB[idx_b], history_fake_b)
+            A_image, history_fake_a,
+            B_image, history_fake_b)
 
         train.optimize_discriminator(a_dis_loss, b_dis_loss)
         # print(f"Step:{step}| "
         #       f"Date:{time.time() - start_time:3.3f}")
 
     print(f"Epoch:{epoch}| "
-          f"generator_loss:{generator_loss.item():3.3f}| "
-          f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():3.3f}| "
-          f"duration:{time.time() - start_time:3.3f}| "
-          f"generator lr:{train.generator_scheduler.get_lr()}| "
+          f"generator_loss:{generator_loss.item():.3f}| "
+          f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():.3f}| "
+          f"duration:{time.time() - start_time:.3f}| "
+          f"generator lr:{train.generator_scheduler.get_last_lr()}| "
           f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
 
     train.schedule_optimizers()
     train.save_weights(epoch)
 
-    if epoch % 10 == 0:
+    if epoch % 3 == 0:
         I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()
         image_numpy = (I + 1.0) / 2.0
         imageio.imwrite(f"step_a{epoch}.png", image_numpy)

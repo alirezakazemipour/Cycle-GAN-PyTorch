@@ -13,33 +13,33 @@ class Generator(nn.Module):
                            out_channels=64,
                            kernel_size=7,
                            padding=0),
-                 nn.InstanceNorm2d(64, affine=True),
+                 nn.InstanceNorm2d(64),
                  nn.ReLU(True),
                  nn.Conv2d(in_channels=64,
                            out_channels=128,
                            kernel_size=3,
                            stride=2,
                            padding=1),
-                 nn.InstanceNorm2d(128, affine=True),
+                 nn.InstanceNorm2d(128),
                  nn.ReLU(True),
                  nn.Conv2d(in_channels=128,
                            out_channels=256,
                            kernel_size=3,
                            stride=2,
                            padding=1),
-                 nn.InstanceNorm2d(256, affine=True),
+                 nn.InstanceNorm2d(256),
                  nn.ReLU(True)]
 
-        for i in range(1, 9 + 1):
-            model += [ResNet(i * 256).cpu()]
+        for _ in range(9):
+            model += [ResNet().cpu()]
 
-        model += [nn.ConvTranspose2d(in_channels=(i + 1) * 256,
+        model += [nn.ConvTranspose2d(in_channels=256,
                                      out_channels=128,
                                      kernel_size=3,
                                      stride=2,
                                      padding=1,
                                      output_padding=1),
-                  nn.InstanceNorm2d(128, affine=True),
+                  nn.InstanceNorm2d(128),
                   nn.ReLU(True),
                   nn.ConvTranspose2d(in_channels=128,
                                      out_channels=64,
@@ -47,23 +47,20 @@ class Generator(nn.Module):
                                      stride=2,
                                      padding=1,
                                      output_padding=1),
-                  nn.InstanceNorm2d(64, affine=True),
+                  nn.InstanceNorm2d(64),
                   nn.ReLU(True),
                   nn.ReflectionPad2d(3),
                   nn.Conv2d(in_channels=64,
                             out_channels=3,
                             kernel_size=7,
                             padding=0),
-                  nn.InstanceNorm2d(3, affine=True),
+                  nn.InstanceNorm2d(3),
                   nn.Tanh()]
 
         self.model = nn.Sequential(*model)
 
         for layer in self.modules():
-            if isinstance(layer, nn.ConvTranspose2d):
-                nn.init.normal_(layer.weight, 0, 0.02)
-                layer.bias.data.zero_()
-            elif isinstance(layer, nn.Conv2d):
+            if isinstance(layer, nn.ConvTranspose2d) or isinstance(layer, nn.Conv2d):
                 nn.init.normal_(layer.weight, 0, 0.02)
                 layer.bias.data.zero_()
 
@@ -105,11 +102,11 @@ class ResNet(nn.Module):
 
         self.pad1 = nn.ReflectionPad2d(1)
         self.conv1 = nn.Conv2d(self.in_channels, 256, 3, padding=0)
-        self.norm1 = nn.InstanceNorm2d(256, affine=True)
+        self.norm1 = nn.InstanceNorm2d(256)
 
         self.pad2 = nn.ReflectionPad2d(1)
         self.conv2 = nn.Conv2d(256, 256, 3, padding=0)
-        self.norm2 = nn.InstanceNorm2d(256, affine=True)
+        self.norm2 = nn.InstanceNorm2d(256)
 
         for layer in self.modules():
             if isinstance(layer, nn.Conv2d):
@@ -125,7 +122,7 @@ class ResNet(nn.Module):
         x = self.conv2(x)
         x = self.norm2(x)
 
-        return torch.cat((inputs, x), dim=1)
+        return x + inputs  # torch.cat((inputs, x), dim=1)
 
 
 # endregion
@@ -147,28 +144,28 @@ class Discriminator(nn.Module):
                               kernel_size=4,
                               stride=2,
                               padding=1)
-        self.norm1 = nn.InstanceNorm2d(128, affine=True)
+        self.norm1 = nn.InstanceNorm2d(128)
 
         self.c256 = nn.Conv2d(in_channels=128,
                               out_channels=256,
                               kernel_size=4,
                               stride=2,
                               padding=1)
-        self.norm2 = nn.InstanceNorm2d(256, affine=True)
+        self.norm2 = nn.InstanceNorm2d(256)
 
         self.c512 = nn.Conv2d(in_channels=256,
                               out_channels=512,
                               kernel_size=4,
                               stride=2,
                               padding=1)
-        self.norm3 = nn.InstanceNorm2d(512, affine=True)
+        self.norm3 = nn.InstanceNorm2d(512)
 
         self.c512_2 = nn.Conv2d(in_channels=512,
                                 out_channels=512,
                                 kernel_size=4,
                                 stride=1,
                                 padding=1)
-        self.norm4 = nn.InstanceNorm2d(512, affine=True)
+        self.norm4 = nn.InstanceNorm2d(512)
 
         self.output = nn.Conv2d(in_channels=512,
                                 out_channels=1,
