@@ -22,14 +22,14 @@ trainB = [cv2.imread(dir) for dir in B_images_dir]
 
 # trainA = []
 # trainB = []
-
-
-def train_processing(dir):
-    I = cv2.imread(dir)
-    I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
-    return I
-
-
+#
+#
+# def train_processing(dir):
+#     I = cv2.imread(dir)
+#     I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
+#     return I
+#
+#
 # with futures.ProcessPoolExecutor() as executor:
 #     results = executor.map(train_processing, A_images_dir)
 #
@@ -62,7 +62,6 @@ def random_crop(image):
     y = np.random.randint(0, max_y)
 
     crop = image[y: y + 256, x: x + 256]
-
     return crop
 
 
@@ -92,7 +91,7 @@ if os.path.exists("CycleGan.pth"):
     print("Checkpoint loaded")
 
 for epoch in range(ep, 200 + 1):
-    for step in tqdm(range(min(len(A_images_dir), len(B_images_dir)))):
+    for step in tqdm(range(1, 1 + min(len(A_images_dir), len(B_images_dir)))):
         start_time = time.time()
         idx_a = random.randint(0, len(trainA) - 1)
         idx_b = random.randint(0, len(trainB) - 1)
