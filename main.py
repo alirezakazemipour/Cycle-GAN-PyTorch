@@ -16,8 +16,8 @@ A_images_dir = glob.glob(
 B_images_dir = glob.glob(
     "horse2zebra/trainB/*.jpg")
 
-trainA = [cv2.imread(dir) for dir in A_images_dir]
-trainB = [cv2.imread(dir) for dir in B_images_dir]
+trainA = [cv2.imread(dir) for dir in A_images_dir[:2]]
+trainB = [cv2.imread(dir) for dir in B_images_dir[:2]]
 
 
 # trainA = []
@@ -78,6 +78,8 @@ def random_jitter(a, b):
 
 
 def preprocess_image_train(a, b):
+    a = cv2.cvtColor(a, cv2.COLOR_BGR2RGB)
+    b = cv2.cvtColor(b, cv2.COLOR_BGR2RGB)
     a, b = random_jitter(a, b)
     b = normalize_img(b)
     a = normalize_img(a)
@@ -126,14 +128,15 @@ for epoch in range(ep, 200 + 1):
           f"generator_loss:{generator_loss.item():.3f}| "
           f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():.3f}| "
           f"duration:{time.time() - start_time:.3f}| "
-          f"generator lr:{train.generator_scheduler.get_last_lr()}| "
-          f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
+          f"generator lr:{train.generator_scheduler.get_lr()}| "
+          f"discriminator lr:{train.discriminator_scheduler.get_lr()}")
 
-    train.schedule_optimizers()
     train.save_weights(epoch)
+    train.schedule_optimizers()
 
-    if epoch % 3 == 0:
+    if epoch % 1 == 0:
         I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()
         image_numpy = (I + 1.0) / 2.0
+        image_numpy = (image_numpy * 255).astype(np.uint8)
         imageio.imwrite(f"step_a{epoch}.png", image_numpy)
         imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a])

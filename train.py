@@ -13,9 +13,9 @@ from torchsummary import summary
 class Train:
     def __init__(self, n_channels, lr=2e-4):
         torch.cuda.empty_cache()
-        self.device = torch.device("cpu")
+        self.device = torch.device("cuda")
         self.n_channels = n_channels
-        self.lr = lr
+        self.lr = 2e-4
 
         self.A_Generator = Generator(self.n_channels).to(self.device)
         # summary(self.A_Generator, (3, 256, 256))
@@ -36,7 +36,7 @@ class Train:
         self.A_fake_history = []
         self.B_fake_history = []
 
-        self.scheduler = lambda step: 1 if step < 100 else max(1 - 1e-2 * (step - 100), 0)
+        self.scheduler = lambda step: max(1 - 1e-2 * (step - 100), 0)
         self.generator_scheduler = LambdaLR(self.generator_opt, lr_lambda=self.scheduler)
         self.discriminator_scheduler = LambdaLR(self.discriminator_opt, lr_lambda=self.scheduler)
 
@@ -64,8 +64,8 @@ class Train:
             if net is not None:
                 for param in net.parameters():
                     param.requires_grad = False
-        a_gan_loss = ((self.A_Discriminator(fake_b) - torch.ones((1, 14, 14), device=self.device)) ** 2).mean()
-        b_gan_loss = ((self.B_Discriminator(fake_a) - torch.ones((1, 14, 14), device=self.device)) ** 2).mean()
+        a_gan_loss = ((self.A_Discriminator(fake_b) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean()
+        b_gan_loss = ((self.B_Discriminator(fake_a) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean()
 
         a_cycle_loss = self.cycle_loss(recycle_a, real_a)
         b_cycle_loss = self.cycle_loss(recycle_b, real_b)
@@ -98,10 +98,12 @@ class Train:
                 for param in net.parameters():
                     param.requires_grad = True
 
-        a_dis_loss = 0.5 * (((self.A_Discriminator(real_b) - torch.ones((1, 14, 14), device=self.device)) ** 2).mean() +
-                            (self.A_Discriminator(history_fake_b) - torch.zeros((1, 14, 14), device=self.device) ** 2).mean())
-        b_dis_loss = 0.5 * (((self.B_Discriminator(real_a) - torch.ones((1, 14, 14), device=self.device)) ** 2).mean() +
-                            (self.B_Discriminator(history_fake_a) - torch.zeros((1, 14, 14), device=self.device) ** 2).mean())
+        a_dis_loss = 0.5 * (((self.A_Discriminator(real_b) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean() +
+                            (self.A_Discriminator(history_fake_b) -
+                             torch.zeros((1, 1, 14, 14), device=self.device) ** 2).mean())
+        b_dis_loss = 0.5 * (((self.B_Discriminator(real_a) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean() +
+                            (self.B_Discriminator(history_fake_a) -
+                             torch.zeros((1, 1, 14, 14), device=self.device) ** 2).mean())
 
         return a_dis_loss, b_dis_loss
 
@@ -157,5 +159,3 @@ class Train:
         self.discriminator_opt.load_state_dict(discriminator_opt_dict)
         self.generator_opt.load_state_dict(generator_opt_dict)
         return epoch
-
-torch.ones_like()

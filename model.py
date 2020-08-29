@@ -31,7 +31,7 @@ class Generator(nn.Module):
                  nn.ReLU(True)]
 
         for _ in range(9):
-            model += [ResNet().cpu()]
+            model += [ResNet().cuda()]
 
         model += [nn.ConvTranspose2d(in_channels=256,
                                      out_channels=128,
