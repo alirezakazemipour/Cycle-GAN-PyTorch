@@ -1,9 +1,10 @@
+from abc import ABC
+
 from torch import nn
 import torch.nn.functional as F
-import torch
 
 
-class Generator(nn.Module):
+class Generator(nn.Module, ABC):
     def __init__(self, n_channels):
         super(Generator, self).__init__()
         self.n_channels = n_channels
@@ -122,13 +123,13 @@ class ResNet(nn.Module):
         x = self.conv2(x)
         x = self.norm2(x)
 
-        return x + inputs  # torch.cat((inputs, x), dim=1)
+        return inputs + x  # torch.cat((inputs, x), dim=1)
 
 
 # endregion
 
 
-class Discriminator(nn.Module):
+class Discriminator(nn.Module, ABC):
     def __init__(self, n_channels):
         super(Discriminator, self).__init__()
         self.n_channels = n_channels

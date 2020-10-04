@@ -93,7 +93,7 @@ if os.path.exists("CycleGan.pth"):
     print("Checkpoint loaded")
 
 for epoch in range(ep, 200 + 1):
-    for step in tqdm(range(1, 1 + min(len(A_images_dir), len(B_images_dir)))):
+    for step in tqdm(range(1, 1 + min(len(trainA), len(trainB)))):
         start_time = time.time()
         idx_a = random.randint(0, len(trainA) - 1)
         idx_b = random.randint(0, len(trainB) - 1)
@@ -129,10 +129,11 @@ for epoch in range(ep, 200 + 1):
           f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():.3f}| "
           f"duration:{time.time() - start_time:.3f}| "
           f"generator lr:{train.generator_scheduler.get_lr()}| "
-          f"discriminator lr:{train.discriminator_scheduler.get_lr()}")
+          f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
 
     train.save_weights(epoch)
-    train.schedule_optimizers()
+    if epoch > 100:
+        train.schedule_optimizers()
 
     if epoch % 1 == 0:
         I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()

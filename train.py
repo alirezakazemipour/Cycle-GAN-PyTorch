@@ -7,11 +7,11 @@ import random
 from torch.optim.lr_scheduler import LambdaLR
 from itertools import chain
 from copy import deepcopy
-from torchsummary import summary
+# from torchsummary import summary
 
 
 class Train:
-    def __init__(self, n_channels, lr=2e-4):
+    def __init__(self, n_channels):
         torch.cuda.empty_cache()
         self.device = torch.device("cuda")
         self.n_channels = n_channels
@@ -19,6 +19,7 @@ class Train:
 
         self.A_Generator = Generator(self.n_channels).to(self.device)
         # summary(self.A_Generator, (3, 256, 256))
+        # exit(0)
         self.A_Discriminator = Discriminator(self.n_channels).to(self.device)
         # summary(self.A_Discriminator, (3, 256, 256))
         # exit(0)
