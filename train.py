@@ -33,6 +33,7 @@ class Train:
 
         self.cycle_loss = torch.nn.L1Loss()
         self.idt_loss = torch.nn.L1Loss()
+        self.mse_loss = torch.nn.MSELoss()
 
         self.A_fake_history = []
         self.B_fake_history = []
@@ -40,6 +41,9 @@ class Train:
         self.scheduler = lambda step: max(1 - 1e-2 * (step - 100), 0)
         self.generator_scheduler = LambdaLR(self.generator_opt, lr_lambda=self.scheduler)
         self.discriminator_scheduler = LambdaLR(self.discriminator_opt, lr_lambda=self.scheduler)
+
+        self.real_labels = torch.ones((1, 1, 14, 14), device=self.device)
+        self.fake_labels = torch.zeros((1, 1, 14, 14), device=self.device)
 
     def forward(self, real_a, real_b):
         real_a = np.expand_dims(real_a, axis=0)
@@ -65,8 +69,8 @@ class Train:
             if net is not None:
                 for param in net.parameters():
                     param.requires_grad = False
-        a_gan_loss = ((self.A_Discriminator(fake_b) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean()
-        b_gan_loss = ((self.B_Discriminator(fake_a) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean()
+        a_gan_loss = self.mse_loss(self.A_Discriminator(fake_b), self.real_labels)
+        b_gan_loss = self.mse_loss(self.B_Discriminator(fake_a), self.real_labels)
 
         a_cycle_loss = self.cycle_loss(recycle_a, real_a)
         b_cycle_loss = self.cycle_loss(recycle_b, real_b)
@@ -99,12 +103,12 @@ class Train:
                 for param in net.parameters():
                     param.requires_grad = True
 
-        a_dis_loss = 0.5 * (((self.A_Discriminator(real_b) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean() +
-                            (self.A_Discriminator(history_fake_b) -
-                             torch.zeros((1, 1, 14, 14), device=self.device) ** 2).mean())
-        b_dis_loss = 0.5 * (((self.B_Discriminator(real_a) - torch.ones((1, 1, 14, 14), device=self.device)) ** 2).mean() +
-                            (self.B_Discriminator(history_fake_a) -
-                             torch.zeros((1, 1, 14, 14), device=self.device) ** 2).mean())
+        a_dis_loss = 0.5 * (
+                self.mse_loss(self.A_Discriminator(real_b), self.real_labels) +
+                self.mse_loss(self.A_Discriminator(history_fake_b), self.fake_labels))
+        b_dis_loss = 0.5 * (
+                self.mse_loss(self.B_Discriminator(real_a), self.real_labels) +
+                self.mse_loss(self.B_Discriminator(history_fake_a), self.fake_labels))
 
         return a_dis_loss, b_dis_loss
 
