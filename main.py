@@ -107,9 +107,7 @@ for epoch in range(ep, 200 + 1):
 
         history_fake_a, history_fake_b = train.get_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
 
-        a_dis_loss, b_dis_loss = train.calculate_discriminator_loss(
-            A_image, history_fake_a,
-            B_image, history_fake_b)
+        a_dis_loss, b_dis_loss = train.calculate_discriminator_loss(A_image, history_fake_a, B_image, history_fake_b)
 
         train.optimize_discriminator(a_dis_loss, b_dis_loss)
         # print(f"Step:{step}| "

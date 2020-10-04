@@ -130,8 +130,8 @@ class Train:
         else:
             if random.uniform(0, 1) < 0.5:
                 rnd_idx = random.randint(0, len(self.A_fake_history) - 1)
-                a_fake_history = deepcopy(self.A_fake_history[rnd_idx])
-                b_fake_history = deepcopy(self.B_fake_history[rnd_idx])
+                a_fake_history = self.A_fake_history[rnd_idx].copy()
+                b_fake_history = self.B_fake_history[rnd_idx].copy()
                 self.A_fake_history[rnd_idx] = fake_a.copy()
                 self.B_fake_history[rnd_idx] = fake_b.copy()
                 return a_fake_history, b_fake_history
