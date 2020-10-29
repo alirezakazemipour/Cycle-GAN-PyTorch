@@ -20,8 +20,8 @@ class Train:
         # summary(self.A_Generator, (3, 256, 256))
         # exit(0)
         self.A_Discriminator = Discriminator(self.n_channels).to(self.device)
-        summary(self.A_Discriminator, (3, 256, 256))
-        exit(0)
+        # summary(self.A_Discriminator, (3, 256, 256))
+        # exit(0)
         self.B_Generator = Generator(self.n_channels).to(self.device)
         self.B_Discriminator = Discriminator(self.n_channels).to(self.device)
 
@@ -41,8 +41,8 @@ class Train:
         self.generator_scheduler = LambdaLR(self.generator_opt, lr_lambda=self.scheduler)
         self.discriminator_scheduler = LambdaLR(self.discriminator_opt, lr_lambda=self.scheduler)
 
-        self.real_labels = torch.ones((1, 1, 14, 14), device=self.device)
-        self.fake_labels = torch.zeros((1, 1, 14, 14), device=self.device)
+        self.real_labels = torch.ones((1, 1, 30, 30), device=self.device)
+        self.fake_labels = torch.zeros((1, 1, 30, 30), device=self.device)
 
     def forward(self, real_a, real_b):
         real_a = np.expand_dims(real_a, axis=0)
