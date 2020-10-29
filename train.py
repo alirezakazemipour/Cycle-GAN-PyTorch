@@ -3,11 +3,10 @@ from model import Generator, Discriminator
 from torch.optim import Adam
 from torch import from_numpy
 import numpy as np
-import random
 from torch.optim.lr_scheduler import LambdaLR
 from itertools import chain
 from copy import deepcopy
-# from torchsummary import summary
+from torchsummary import summary
 
 
 class Train:
@@ -21,8 +20,8 @@ class Train:
         # summary(self.A_Generator, (3, 256, 256))
         # exit(0)
         self.A_Discriminator = Discriminator(self.n_channels).to(self.device)
-        # summary(self.A_Discriminator, (3, 256, 256))
-        # exit(0)
+        summary(self.A_Discriminator, (3, 256, 256))
+        exit(0)
         self.B_Generator = Generator(self.n_channels).to(self.device)
         self.B_Discriminator = Discriminator(self.n_channels).to(self.device)
 
@@ -128,8 +127,8 @@ class Train:
             self.B_fake_history.append(fake_b)
             return fake_a, fake_b
         else:
-            if random.uniform(0, 1) < 0.5:
-                rnd_idx = random.randint(0, len(self.A_fake_history) - 1)
+            if np.random.uniform() < 0.5:
+                rnd_idx = np.random.randint(0, len(self.A_fake_history) - 1)
                 a_fake_history = self.A_fake_history[rnd_idx].copy()
                 b_fake_history = self.B_fake_history[rnd_idx].copy()
                 self.A_fake_history[rnd_idx] = fake_a.copy()

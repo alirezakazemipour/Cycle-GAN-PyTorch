@@ -1,5 +1,4 @@
 from abc import ABC
-
 from torch import nn
 import torch.nn.functional as F
 
@@ -95,7 +94,7 @@ class Generator(nn.Module, ABC):
 # region ResNet
 
 
-class ResNet(nn.Module):
+class ResNet(nn.Module, ABC):
     def __init__(self, in_channels=256, kernel_size=3):
         super(ResNet, self).__init__()
         self.in_channels = in_channels
@@ -157,16 +156,9 @@ class Discriminator(nn.Module, ABC):
         self.c512 = nn.Conv2d(in_channels=256,
                               out_channels=512,
                               kernel_size=4,
-                              stride=2,
+                              stride=1,
                               padding=1)
         self.norm3 = nn.InstanceNorm2d(512)
-
-        self.c512_2 = nn.Conv2d(in_channels=512,
-                                out_channels=512,
-                                kernel_size=4,
-                                stride=1,
-                                padding=1)
-        self.norm4 = nn.InstanceNorm2d(512)
 
         self.output = nn.Conv2d(in_channels=512,
                                 out_channels=1,
@@ -190,8 +182,5 @@ class Discriminator(nn.Module, ABC):
 
         x = self.c512(x)
         x = F.leaky_relu(self.norm3(x), 0.2)
-
-        x = self.c512_2(x)
-        x = F.leaky_relu(self.norm4(x), 0.2)
 
         return self.output(x)
