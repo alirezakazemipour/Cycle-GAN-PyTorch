@@ -129,6 +129,11 @@ class ResNet(nn.Module, ABC):
 
 
 class Discriminator(nn.Module, ABC):
+    """
+    https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/162#issue-280837085
+    https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/issues/39#issuecomment-336692351
+    """
+
     def __init__(self, n_channels):
         super(Discriminator, self).__init__()
         self.n_channels = n_channels
