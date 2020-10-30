@@ -9,6 +9,7 @@ from concurrent import futures
 import os
 import pickle
 from tqdm import tqdm
+import torch
 from torch.utils.tensorboard import SummaryWriter
 
 A_images_dir = glob.glob(
@@ -16,38 +17,7 @@ A_images_dir = glob.glob(
 B_images_dir = glob.glob(
     "horse2zebra/trainB/*.jpg")
 
-trainA = [cv2.imread(dir) for dir in A_images_dir[:2]]
-trainB = [cv2.imread(dir) for dir in B_images_dir[:2]]
-
-
-# trainA = []
-# trainB = []
-#
-#
-# def train_processing(dir):
-#     I = cv2.imread(dir)
-#     I = cv2.cvtColor(I, cv2.COLOR_BGR2RGB)
-#     return I
-#
-#
-# with futures.ProcessPoolExecutor() as executor:
-#     results = executor.map(train_processing, A_images_dir)
-#
-#     for result in results:
-#         trainA.append(result)
-#
-# with futures.ProcessPoolExecutor() as executor:
-#     results = executor.map(train_processing, B_images_dir)
-#
-#     for result in results:
-#         trainB.append(result)
-
-
-# with open('trainA_dataset.pickle', 'rb') as f:
-#     trainA = pickle.load(f)
-#
-# with open('trainB_dataset.pickle', 'rb') as f:
-#     trainB = pickle.load(f)
+device = torch.device("cuda")
 
 
 def normalize_img(image):
@@ -65,28 +35,33 @@ def random_crop(image):
     return crop
 
 
-def random_jitter(a, b):
+def random_jitter(a):
     a = cv2.resize(a, (286, 286), interpolation=cv2.INTER_NEAREST)
-    b = cv2.resize(b, (286, 286), interpolation=cv2.INTER_NEAREST)
     a = random_crop(a)
-    b = random_crop(b)
 
     if np.random.random() > 0.5:
         a = np.fliplr(a)
-        b = np.fliplr(b)
-    return a, b
+    return a
 
 
-def preprocess_image_train(a, b):
-    a = cv2.cvtColor(a, cv2.COLOR_BGR2RGB)
-    b = cv2.cvtColor(b, cv2.COLOR_BGR2RGB)
-    a, b = random_jitter(a, b)
-    b = normalize_img(b)
-    a = normalize_img(a)
-    return a, b
+def preprocess_image_train(addr):
+    img = cv2.imread(addr)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = random_jitter(img)
+    img = normalize_img(img)
+    return img
 
 
-train = Train(3)
+with futures.ProcessPoolExecutor() as executor:
+    trainA = np.stack(list(executor.map(preprocess_image_train, A_images_dir)))
+    trainB = np.stack(list(executor.map(preprocess_image_train, B_images_dir)))
+
+trainA = np.expand_dims(trainA, axis=1)
+trainB = np.expand_dims(trainB, axis=1)
+trainA = torch.from_numpy(trainA).float().permute([0, 1, 4, 2, 3]).contiguous().to(device)
+trainB = torch.from_numpy(trainB).float().permute([0, 1, 4, 2, 3]).contiguous().to(device)
+
+train = Train(3, device)
 ep = 1
 if os.path.exists("CycleGan.pth"):
     ep = train.load_weights("CycleGan.pth") + 1
@@ -98,7 +73,7 @@ for epoch in range(ep, 200 + 1):
         idx_a = random.randint(0, len(trainA) - 1)
         idx_b = random.randint(0, len(trainB) - 1)
 
-        A_image, B_image = preprocess_image_train(trainA[idx_a], trainB[idx_b])
+        A_image, B_image = trainA[idx_a], trainB[idx_b]
 
         fake_a, recycle_a, fake_b, recycle_b = train.forward(A_image, B_image)
         generator_loss, a_gan_loss, a_cycle_loss, loss_idt_A, b_gan_loss, b_cycle_loss, loss_idt_B = \
@@ -126,7 +101,7 @@ for epoch in range(ep, 200 + 1):
           f"generator_loss:{generator_loss.item():.3f}| "
           f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():.3f}| "
           f"duration:{time.time() - start_time:.3f}| "
-          f"generator lr:{train.generator_scheduler.get_lr()}| "
+          f"generator lr:{train.generator_scheduler.get_last_lr()}| "
           f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
 
     train.save_weights(epoch)

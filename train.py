@@ -10,9 +10,9 @@ from torchsummary import summary
 
 
 class Train:
-    def __init__(self, n_channels):
+    def __init__(self, n_channels, device):
         torch.cuda.empty_cache()
-        self.device = torch.device("cuda")
+        self.device = device
         self.n_channels = n_channels
         self.lr = 2e-4
 
@@ -45,10 +45,6 @@ class Train:
         self.fake_labels = torch.zeros((1, 1, 30, 30), device=self.device)
 
     def forward(self, real_a, real_b):
-        real_a = np.expand_dims(real_a, axis=0)
-        real_b = np.expand_dims(real_b, axis=0)
-        real_a = from_numpy(real_a).float().permute([0, 3, 1, 2]).to(self.device)
-        real_b = from_numpy(real_b).float().permute([0, 3, 1, 2]).to(self.device)
 
         fake_b = self.A_Generator(real_a)
         recycle_a = self.B_Generator(fake_b)
@@ -58,11 +54,6 @@ class Train:
         return fake_a, recycle_a, fake_b, recycle_b
 
     def calculate_generator_loss(self, real_a, fake_a, recycle_a, real_b, fake_b, recycle_b, lam=10):
-
-        real_a = np.expand_dims(real_a, axis=0)
-        real_b = np.expand_dims(real_b, axis=0)
-        real_a = from_numpy(real_a).float().permute([0, 3, 1, 2]).to(self.device)
-        real_b = from_numpy(real_b).float().permute([0, 3, 1, 2]).to(self.device)
 
         for net in [self.A_Discriminator, self.B_Discriminator]:
             if net is not None:
@@ -90,10 +81,6 @@ class Train:
 
     def calculate_discriminator_loss(self, real_a, history_fake_a, real_b, history_fake_b):
 
-        real_a = np.expand_dims(real_a, axis=0)
-        real_b = np.expand_dims(real_b, axis=0)
-        real_a = from_numpy(real_a).float().permute([0, 3, 1, 2]).to(self.device)
-        real_b = from_numpy(real_b).float().permute([0, 3, 1, 2]).to(self.device)
         history_fake_a = from_numpy(history_fake_a).float().to(self.device)
         history_fake_b = from_numpy(history_fake_b).float().to(self.device)
 
