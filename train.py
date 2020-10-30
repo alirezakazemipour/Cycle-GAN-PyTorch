@@ -81,9 +81,6 @@ class Train:
 
     def calculate_discriminator_loss(self, real_a, history_fake_a, real_b, history_fake_b):
 
-        history_fake_a = from_numpy(history_fake_a).float().to(self.device)
-        history_fake_b = from_numpy(history_fake_b).float().to(self.device)
-
         for net in [self.A_Discriminator, self.B_Discriminator]:
             if net is not None:
                 for param in net.parameters():
@@ -116,10 +113,10 @@ class Train:
         else:
             if np.random.uniform() < 0.5:
                 rnd_idx = np.random.randint(0, len(self.A_fake_history) - 1)
-                a_fake_history = self.A_fake_history[rnd_idx].copy()
-                b_fake_history = self.B_fake_history[rnd_idx].copy()
-                self.A_fake_history[rnd_idx] = fake_a.copy()
-                self.B_fake_history[rnd_idx] = fake_b.copy()
+                a_fake_history = self.A_fake_history[rnd_idx].clone()
+                b_fake_history = self.B_fake_history[rnd_idx].clone()
+                self.A_fake_history[rnd_idx] = fake_a.clone()
+                self.B_fake_history[rnd_idx] = fake_b.clone()
                 return a_fake_history, b_fake_history
             else:
                 return fake_a, fake_b

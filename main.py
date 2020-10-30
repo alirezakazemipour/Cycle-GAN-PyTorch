@@ -80,7 +80,7 @@ for epoch in range(ep, 200 + 1):
             train.calculate_generator_loss(A_image, fake_a, recycle_a, B_image, fake_b, recycle_b)
         train.optimize_generator(generator_loss)
 
-        history_fake_a, history_fake_b = train.get_history(fake_a.detach().cpu().numpy(), fake_b.detach().cpu().numpy())
+        history_fake_a, history_fake_b = train.get_history(fake_a.detach(), fake_b.detach())
 
         a_dis_loss, b_dis_loss = train.calculate_discriminator_loss(A_image, history_fake_a, B_image, history_fake_b)
 
