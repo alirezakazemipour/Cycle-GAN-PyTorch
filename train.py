@@ -10,11 +10,11 @@ from torchsummary import summary
 
 
 class Train:
-    def __init__(self, n_channels, device):
+    def __init__(self, n_channels, device, lr):
         torch.cuda.empty_cache()
         self.device = device
         self.n_channels = n_channels
-        self.lr = 2e-4
+        self.lr = lr
 
         self.A_Generator = Generator(self.n_channels).to(self.device)
         # summary(self.A_Generator, (3, 256, 256))
@@ -30,16 +30,15 @@ class Train:
         self.discriminator_opt = Adam(chain(self.A_Discriminator.parameters(), self.B_Discriminator.parameters()),
                                       self.lr, betas=(0.5, 0.999))
 
-        self.cycle_loss = torch.nn.L1Loss()
-        self.idt_loss = torch.nn.L1Loss()
+        self.l1_loss = torch.nn.L1Loss()
         self.mse_loss = torch.nn.MSELoss()
 
         self.A_fake_history = []
         self.B_fake_history = []
 
-        self.scheduler = lambda step: max(1 - 1e-2 * (step - 100), 0)
-        self.generator_scheduler = LambdaLR(self.generator_opt, lr_lambda=self.scheduler)
-        self.discriminator_scheduler = LambdaLR(self.discriminator_opt, lr_lambda=self.scheduler)
+        # self.scheduler = lambda step: max(1 - 1e-2 * (step - 100), 0)
+        # self.generator_scheduler = LambdaLR(self.generator_opt, lr_lambda=self.scheduler)
+        # self.discriminator_scheduler = LambdaLR(self.discriminator_opt, lr_lambda=self.scheduler)
 
         self.real_labels = torch.ones((1, 1, 30, 30), device=self.device)
         self.fake_labels = torch.zeros((1, 1, 30, 30), device=self.device)
@@ -62,13 +61,13 @@ class Train:
         a_gan_loss = self.mse_loss(self.A_Discriminator(fake_b), self.real_labels)
         b_gan_loss = self.mse_loss(self.B_Discriminator(fake_a), self.real_labels)
 
-        a_cycle_loss = self.cycle_loss(recycle_a, real_a)
-        b_cycle_loss = self.cycle_loss(recycle_b, real_b)
+        a_cycle_loss = self.l1_loss(recycle_a, real_a)
+        b_cycle_loss = self.l1_loss(recycle_b, real_b)
 
         idt_A = self.A_Generator(real_b)
-        loss_idt_A = self.idt_loss(idt_A, real_b) * lam * 0.5
+        loss_idt_A = self.l1_loss(idt_A, real_b) * lam * 0.5
         idt_B = self.B_Generator(real_a)
-        loss_idt_B = self.idt_loss(idt_B, real_a) * lam * 0.5
+        loss_idt_B = self.l1_loss(idt_B, real_a) * lam * 0.5
 
         full_obj = a_gan_loss + b_gan_loss + lam * (a_cycle_loss + b_cycle_loss) + loss_idt_A + loss_idt_B
 
@@ -101,9 +100,9 @@ class Train:
         b_dis_loss.backward()
         self.discriminator_opt.step()
 
-    def schedule_optimizers(self):
-        self.generator_scheduler.step()
-        self.discriminator_scheduler.step()
+    # def schedule_optimizers(self):
+    #     self.generator_scheduler.step()
+    #     self.discriminator_scheduler.step()
 
     def get_history(self, fake_a, fake_b):
         if len(self.A_fake_history) < 50:

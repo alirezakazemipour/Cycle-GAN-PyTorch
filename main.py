@@ -7,7 +7,6 @@ import time
 import imageio
 from concurrent import futures
 import os
-import pickle
 from tqdm import tqdm
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -18,6 +17,7 @@ B_images_dir = glob.glob(
     "horse2zebra/trainB/*.jpg")
 
 device = torch.device("cuda")
+lr = 2e-4
 
 
 def normalize_img(image):
@@ -61,7 +61,7 @@ trainB = np.expand_dims(trainB, axis=1)
 trainA = torch.from_numpy(trainA).float().permute([0, 1, 4, 2, 3]).contiguous().to(device)
 trainB = torch.from_numpy(trainB).float().permute([0, 1, 4, 2, 3]).contiguous().to(device)
 
-train = Train(3, device)
+train = Train(3, device, lr)
 ep = 1
 if os.path.exists("CycleGan.pth"):
     ep = train.load_weights("CycleGan.pth") + 1
@@ -87,6 +87,7 @@ for epoch in range(ep, 200 + 1):
         train.optimize_discriminator(a_dis_loss, b_dis_loss)
         # print(f"Step:{step}| "
         #       f"Date:{time.time() - start_time:3.3f}")
+
         with SummaryWriter("logs/") as writer:
             writer.add_scalar("A_GAN_Loss", a_gan_loss, epoch * step)
             writer.add_scalar("A_Recycle_Loss", a_cycle_loss, epoch * step)
@@ -97,20 +98,24 @@ for epoch in range(ep, 200 + 1):
             writer.add_scalar("B_Identity_Loss", loss_idt_B, epoch * step)
             writer.add_scalar("B_Dis_Loss", b_dis_loss, epoch * step)
 
+    if epoch > 100:
+        # train.schedule_optimizers()
+        lr = max(1 - 1e-2 * (epoch - 100), 0) * lr
+        for g_param_group, d_param_group in zip(train.generator_opt.param_groups, train.discriminator_opt.param_groups):
+            g_param_group['lr'] = lr
+            d_param_group["lr"] = lr
+
     print(f"Epoch:{epoch}| "
           f"generator_loss:{generator_loss.item():.3f}| "
           f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():.3f}| "
           f"duration:{time.time() - start_time:.3f}| "
-          f"generator lr:{train.generator_scheduler.get_last_lr()}| "
-          f"discriminator lr:{train.discriminator_scheduler.get_last_lr()}")
+          # f"lr:{train.generator_scheduler.get_last_lr()}| ")
+          f"lr:{lr:.3f}| ")
 
     train.save_weights(epoch)
-    if epoch > 100:
-        train.schedule_optimizers()
-
     if epoch % 1 == 0:
         I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()
         image_numpy = (I + 1.0) / 2.0
         image_numpy = (image_numpy * 255).astype(np.uint8)
         imageio.imwrite(f"step_a{epoch}.png", image_numpy)
-        imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a])
+        imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a].cpu().numpy()[0])
