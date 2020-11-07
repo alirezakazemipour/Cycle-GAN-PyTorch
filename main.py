@@ -64,7 +64,7 @@ trainB = torch.from_numpy(trainB).float().permute([0, 1, 4, 2, 3]).contiguous().
 train = Train(3, device, lr)
 ep = 1
 if os.path.exists("CycleGan.pth"):
-    ep = train.load_weights("CycleGan.pth") + 1
+    ep, lr = train.load_weights("CycleGan.pth") + 1
     print("Checkpoint loaded")
 
 for epoch in range(ep, 200 + 1):
@@ -88,15 +88,15 @@ for epoch in range(ep, 200 + 1):
         # print(f"Step:{step}| "
         #       f"Date:{time.time() - start_time:3.3f}")
 
-        with SummaryWriter("logs/") as writer:
-            writer.add_scalar("A_GAN_Loss", a_gan_loss, epoch * step)
-            writer.add_scalar("A_Recycle_Loss", a_cycle_loss, epoch * step)
-            writer.add_scalar("A_Identity_Loss", loss_idt_A, epoch * step)
-            writer.add_scalar("A_Dis_Loss", a_dis_loss, epoch * step)
-            writer.add_scalar("B_GAN_Loss", b_gan_loss, epoch * step)
-            writer.add_scalar("B_Recycle_Loss", b_cycle_loss, epoch * step)
-            writer.add_scalar("B_Identity_Loss", loss_idt_B, epoch * step)
-            writer.add_scalar("B_Dis_Loss", b_dis_loss, epoch * step)
+        # with SummaryWriter("logs/") as writer:
+        #     writer.add_scalar("A_GAN_Loss", a_gan_loss, epoch * step)
+        #     writer.add_scalar("A_Recycle_Loss", a_cycle_loss, epoch * step)
+        #     writer.add_scalar("A_Identity_Loss", loss_idt_A, epoch * step)
+        #     writer.add_scalar("A_Dis_Loss", a_dis_loss, epoch * step)
+        #     writer.add_scalar("B_GAN_Loss", b_gan_loss, epoch * step)
+        #     writer.add_scalar("B_Recycle_Loss", b_cycle_loss, epoch * step)
+        #     writer.add_scalar("B_Identity_Loss", loss_idt_B, epoch * step)
+        #     writer.add_scalar("B_Dis_Loss", b_dis_loss, epoch * step)
 
     if epoch > 100:
         # train.schedule_optimizers()
@@ -104,18 +104,18 @@ for epoch in range(ep, 200 + 1):
         for g_param_group, d_param_group in zip(train.generator_opt.param_groups, train.discriminator_opt.param_groups):
             g_param_group['lr'] = lr
             d_param_group["lr"] = lr
-
+            
     print(f"Epoch:{epoch}| "
           f"generator_loss:{generator_loss.item():.3f}| "
           f"discriminator:{0.5 * (a_dis_loss + b_dis_loss).item():.3f}| "
           f"duration:{time.time() - start_time:.3f}| "
-          # f"lr:{train.generator_scheduler.get_last_lr()}| ")
-          f"lr:{lr:.3f}| ")
+          f"lr:{lr:.5f} ")
 
-    train.save_weights(epoch)
-    if epoch % 1 == 0:
+    train.save_weights(epoch, lr)
+    if epoch % 25 == 0:
         I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()
         image_numpy = (I + 1.0) / 2.0
         image_numpy = (image_numpy * 255).astype(np.uint8)
         imageio.imwrite(f"step_a{epoch}.png", image_numpy)
-        imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a].cpu().numpy()[0])
+        imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a][0].permute([1, 2, 0]).cpu().numpy())
+
