@@ -147,4 +147,8 @@ class Train:
         self.B_Discriminator.load_state_dict(B_Discriminator_dict)
         self.discriminator_opt.load_state_dict(discriminator_opt_dict)
         self.generator_opt.load_state_dict(generator_opt_dict)
-        return epoch, lr
+        return epoch
+
+    def set_to_eval(self):
+        self.A_Generator.eval()
+        self.B_Generator.eval()
