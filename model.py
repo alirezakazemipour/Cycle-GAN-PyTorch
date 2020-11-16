@@ -54,7 +54,7 @@ class Generator(nn.Module, ABC):
                             out_channels=3,
                             kernel_size=7,
                             padding=0),
-                  nn.InstanceNorm2d(3),
+                  # nn.InstanceNorm2d(3),
                   nn.Tanh()]
 
         self.model = nn.Sequential(*model)

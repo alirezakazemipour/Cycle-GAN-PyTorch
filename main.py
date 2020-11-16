@@ -18,7 +18,7 @@ B_images_dir = glob.glob(
 
 device = torch.device("cuda")
 lr = 2e-4
-TRAIN_FLAG = False
+TRAIN_FLAG = True
 
 
 def normalize_img(image):
