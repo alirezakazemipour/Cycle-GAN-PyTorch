@@ -9,7 +9,6 @@ from concurrent import futures
 import os
 from tqdm import tqdm
 import torch
-from torch.utils.tensorboard import SummaryWriter
 
 A_images_dir = glob.glob(
     "horse2zebra/trainA/*.jpg")
@@ -71,6 +70,12 @@ if TRAIN_FLAG:
         print("Checkpoint loaded")
 
     for epoch in range(ep + 1, 200 + 1):
+        if epoch > 100:
+            lr = max(1 - 1e-2 * (epoch - 100), 0) * lr
+            for g_param_group, d_param_group in zip(train.generator_opt.param_groups,
+                                                    train.discriminator_opt.param_groups):
+                g_param_group['lr'] = lr
+                d_param_group["lr"] = lr
         for step in tqdm(range(1, 1 + min(len(trainA), len(trainB)))):
             start_time = time.time()
             idx_a = random.randint(0, len(trainA) - 1)
@@ -89,26 +94,6 @@ if TRAIN_FLAG:
                                                                         history_fake_b)
 
             train.optimize_discriminator(a_dis_loss, b_dis_loss)
-            # print(f"Step:{step}| "
-            #       f"Date:{time.time() - start_time:3.3f}")
-
-            # with SummaryWriter("logs/") as writer:
-            #     writer.add_scalar("A_GAN_Loss", a_gan_loss, epoch * step)
-            #     writer.add_scalar("A_Recycle_Loss", a_cycle_loss, epoch * step)
-            #     writer.add_scalar("A_Identity_Loss", loss_idt_A, epoch * step)
-            #     writer.add_scalar("A_Dis_Loss", a_dis_loss, epoch * step)
-            #     writer.add_scalar("B_GAN_Loss", b_gan_loss, epoch * step)
-            #     writer.add_scalar("B_Recycle_Loss", b_cycle_loss, epoch * step)
-            #     writer.add_scalar("B_Identity_Loss", loss_idt_B, epoch * step)
-            #     writer.add_scalar("B_Dis_Loss", b_dis_loss, epoch * step)
-
-        if epoch > 100:
-            # train.schedule_optimizers()
-            lr = max(1 - 1e-2 * (epoch - 100), 0) * lr
-            for g_param_group, d_param_group in zip(train.generator_opt.param_groups,
-                                                    train.discriminator_opt.param_groups):
-                g_param_group['lr'] = lr
-                d_param_group["lr"] = lr
 
         print(f"Epoch:{epoch}| "
               f"generator_loss:{generator_loss.item():.3f}| "
