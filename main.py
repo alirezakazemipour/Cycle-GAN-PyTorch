@@ -101,7 +101,7 @@ if TRAIN_FLAG:
               f"duration:{time.time() - start_time:.3f}| "
               f"lr:{lr} ")
 
-        train.save_weights(epoch, lr)
+        train.save_weights(epoch)
         if epoch % 25 == 0:
             I = fake_b[0].permute([1, 2, 0]).detach().cpu().numpy()
             image_numpy = (I + 1.0) / 2.0
@@ -109,11 +109,13 @@ if TRAIN_FLAG:
             imageio.imwrite(f"step_a{epoch}.png", image_numpy)
             imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a][0].permute([1, 2, 0]).cpu().numpy())
 else:
+    print("testing.")
     horse = cv2.imread("horse.jpg")
+    zebra = cv2.imread("zebra.jpg")
     horse = cv2.cvtColor(horse, cv2.COLOR_BGR2RGB)
     horse = cv2.resize(horse, (256, 256), interpolation=cv2.INTER_NEAREST)
     horse = normalize_img(horse)
-    zebra = cv2.imread("zebra.jpg")
+
     zebra = cv2.cvtColor(zebra, cv2.COLOR_BGR2RGB)
     zebra = cv2.resize(zebra, (256, 256), interpolation=cv2.INTER_NEAREST)
     zebra = normalize_img(zebra)
@@ -133,7 +135,7 @@ else:
     fake_zebra = fake_zebra[0].permute([1, 2, 0]).detach().cpu().numpy()
     fake_zebra = (fake_zebra + 1.0) / 2.0
     fake_zebra = (fake_zebra * 255).astype(np.uint8)
-    imageio.imwrite(f"fake_zebra.png", fake_horse)
+    imageio.imwrite(f"fake_zebra.png", fake_zebra)
 
     fake_horse = fake_horse[0].permute([1, 2, 0]).detach().cpu().numpy()
     fake_horse = (fake_horse + 1.0) / 2.0

@@ -1,11 +1,9 @@
 import torch
 from model import Generator, Discriminator
 from torch.optim import Adam
-from torch import from_numpy
 import numpy as np
 from torch.optim.lr_scheduler import LambdaLR
 from itertools import chain
-from copy import deepcopy
 from torchsummary import summary
 
 
@@ -120,15 +118,14 @@ class Train:
             else:
                 return fake_a, fake_b
 
-    def save_weights(self, epoch, lr):
+    def save_weights(self, epoch):
         torch.save({"A_Generator_dict": self.A_Generator.state_dict(),
                     "B_Generator_dict": self.B_Generator.state_dict(),
                     "A_Discriminator_dict": self.A_Discriminator.state_dict(),
                     "B_Discriminator_dict": self.B_Discriminator.state_dict(),
                     "discriminator_opt_dict": self.discriminator_opt.state_dict(),
                     "generator_opt_dict": self.generator_opt.state_dict(),
-                    "epoch": epoch,
-                    "lr": lr}, "CycleGan.pth")
+                    "epoch": epoch}, "CycleGan.pth")
 
     def load_weights(self, path):
 
@@ -140,7 +137,6 @@ class Train:
         discriminator_opt_dict = checkpoint["discriminator_opt_dict"]
         generator_opt_dict = checkpoint["generator_opt_dict"]
         epoch = checkpoint["epoch"]
-        lr = checkpoint["lr"]
         self.A_Generator.load_state_dict(A_Generator_dict)
         self.B_Generator.load_state_dict(B_Generator_dict)
         self.A_Discriminator.load_state_dict(A_Discriminator_dict)
