@@ -16,8 +16,6 @@ eggs/
 .eggs/
 .idea/
 models/
-*.jpg
-*.png
 *.pth
 lib/
 lib64/
