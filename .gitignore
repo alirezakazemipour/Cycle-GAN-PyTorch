@@ -18,6 +18,7 @@ eggs/
 models/
 *.jpg
 *.png
+*.pth
 lib/
 lib64/
 parts/

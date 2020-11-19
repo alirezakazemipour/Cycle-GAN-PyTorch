@@ -17,7 +17,7 @@ B_images_dir = glob.glob(
 
 device = torch.device("cuda")
 lr = 2e-4
-TRAIN_FLAG = True
+TRAIN_FLAG = False
 
 
 def normalize_img(image):
@@ -71,11 +71,13 @@ if TRAIN_FLAG:
 
     for epoch in range(ep + 1, 200 + 1):
         if epoch > 100:
-            lr = max(1 - 1e-2 * (epoch - 100), 0) * lr
+            current_lr = max(1 - 1e-2 * (epoch - 100), 0) * lr
             for g_param_group, d_param_group in zip(train.generator_opt.param_groups,
                                                     train.discriminator_opt.param_groups):
-                g_param_group['lr'] = lr
-                d_param_group["lr"] = lr
+                g_param_group['lr'] = current_lr
+                d_param_group["lr"] = current_lr
+        else:
+            current_lr = 2e-4
         for step in tqdm(range(1, 1 + min(len(trainA), len(trainB)))):
             start_time = time.time()
             idx_a = random.randint(0, len(trainA) - 1)
@@ -130,7 +132,14 @@ else:
     test.set_to_eval()
 
     fake_zebra = test.A_Generator(horse)
+    reconstructed_horse = test.A_Generator(fake_zebra)
     fake_horse = test.B_Generator(zebra)
+    reconstructed_zebra = test.B_Generator(fake_horse)
+
+    reconstructed_horse = reconstructed_horse[0].permute([1, 2, 0]).detach().cpu().numpy()
+    reconstructed_horse = (reconstructed_horse + 1.0) / 2.0
+    reconstructed_horse = (reconstructed_horse * 255).astype(np.uint8)
+    imageio.imwrite(f"reconstructed_horse.png", reconstructed_horse)
 
     fake_zebra = fake_zebra[0].permute([1, 2, 0]).detach().cpu().numpy()
     fake_zebra = (fake_zebra + 1.0) / 2.0
@@ -141,3 +150,8 @@ else:
     fake_horse = (fake_horse + 1.0) / 2.0
     fake_horse = (fake_horse * 255).astype(np.uint8)
     imageio.imwrite(f"fake_horse.png", fake_horse)
+
+    reconstructed_zebra = reconstructed_zebra[0].permute([1, 2, 0]).detach().cpu().numpy()
+    reconstructed_zebra = (reconstructed_zebra + 1.0) / 2.0
+    reconstructed_zebra = (reconstructed_zebra * 255).astype(np.uint8)
+    imageio.imwrite(f"reconstructed_zebra.png", reconstructed_zebra)
