@@ -112,8 +112,8 @@ if TRAIN_FLAG:
             imageio.imwrite(f"step_a{epoch}_real.png", trainA[idx_a][0].permute([1, 2, 0]).cpu().numpy())
 else:
     print("testing.")
-    horse = cv2.imread("horse.jpg")
-    zebra = cv2.imread("zebra.jpg")
+    horse = cv2.imread("imgs/horse.jpg")
+    zebra = cv2.imread("imgs/zebra.jpg")
     horse = cv2.cvtColor(horse, cv2.COLOR_BGR2RGB)
     horse = cv2.resize(horse, (256, 256), interpolation=cv2.INTER_NEAREST)
     horse = normalize_img(horse)
@@ -132,26 +132,26 @@ else:
     test.set_to_eval()
 
     fake_zebra = test.A_Generator(horse)
-    reconstructed_horse = test.A_Generator(fake_zebra)
+    reconstructed_horse = test.B_Generator(fake_zebra)
     fake_horse = test.B_Generator(zebra)
-    reconstructed_zebra = test.B_Generator(fake_horse)
+    reconstructed_zebra = test.A_Generator(fake_horse)
 
     reconstructed_horse = reconstructed_horse[0].permute([1, 2, 0]).detach().cpu().numpy()
     reconstructed_horse = (reconstructed_horse + 1.0) / 2.0
     reconstructed_horse = (reconstructed_horse * 255).astype(np.uint8)
-    imageio.imwrite(f"reconstructed_horse.png", reconstructed_horse)
+    imageio.imwrite("imgs/reconstructed_horse.png", reconstructed_horse)
 
     fake_zebra = fake_zebra[0].permute([1, 2, 0]).detach().cpu().numpy()
     fake_zebra = (fake_zebra + 1.0) / 2.0
     fake_zebra = (fake_zebra * 255).astype(np.uint8)
-    imageio.imwrite(f"fake_zebra.png", fake_zebra)
+    imageio.imwrite("imgs/fake_zebra.png", fake_zebra)
 
     fake_horse = fake_horse[0].permute([1, 2, 0]).detach().cpu().numpy()
     fake_horse = (fake_horse + 1.0) / 2.0
     fake_horse = (fake_horse * 255).astype(np.uint8)
-    imageio.imwrite(f"fake_horse.png", fake_horse)
+    imageio.imwrite("imgs/fake_horse.png", fake_horse)
 
     reconstructed_zebra = reconstructed_zebra[0].permute([1, 2, 0]).detach().cpu().numpy()
     reconstructed_zebra = (reconstructed_zebra + 1.0) / 2.0
     reconstructed_zebra = (reconstructed_zebra * 255).astype(np.uint8)
-    imageio.imwrite(f"reconstructed_zebra.png", reconstructed_zebra)
+    imageio.imwrite("imgs/reconstructed_zebra.png", reconstructed_zebra)

@@ -9,6 +9,11 @@
 
 ## Demo
 
+Original image| Fake image| Reconstructed image
+:-------------------:|:----------------:|:-----------------------------:|
+![](imgs/horse.jpg)| ![](imgs/fake_zebra.png)| ![](imgs/reconstructed_horse.png)
+![](imgs/zebra.jpg)| ![](imgs/fake_horse.png)| ![](imgs/reconstructed_zebra.png)
+
 
 ## Dataset tested
 - [x] Horse to Zebra & Vice Versa
